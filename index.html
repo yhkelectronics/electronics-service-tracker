@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="my">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ပစ္စည်းပြင်ဆင်မှု မှတ်တမ်း</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Noto+Sans+Myanmar:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/firebase@10.12.2/firebase-app-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/firebase@10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/firebase@10.12.2/firebase-auth-compat.js"></script>
+<style>
+  :root {
+    --bg: #12161b; --surface: #1a2029; --surface-2: #212933; --line: #2c3541;
+    --copper: #c8814a; --copper-dim: #8a5b34; --teal: #4f9d92; --red: #c65b4e; --green: #5a7d3a;
+    --text: #e9e6df; --muted: #8a93a0;
+    --font-head: 'Space Grotesk', 'Noto Sans Myanmar', sans-serif;
+    --font-body: 'Noto Sans Myanmar', 'Space Grotesk', sans-serif;
+    box-sizing: border-box; padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  * { box-sizing: inherit; }
+  html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--font-body); line-height: 1.5; }
+  header {
+    padding: 20px 20px 16px; border-bottom: 1px solid var(--line);
+    background: linear-gradient(180deg, #161b22, var(--bg));
+    display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap;
+  }
+  header h1 { font-family: var(--font-head); font-weight: 700; font-size: 1.4rem; margin: 0 0 3px; letter-spacing: 0.2px; }
+  header p { margin: 0; color: var(--muted); font-size: 0.85rem; }
+  .synctag { display: inline-flex; align-items: center; gap: 5px; font-size: 0.72rem; color: var(--teal); margin-top: 6px; }
+  .synctag .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--teal); }
+  .synctag.offline { color: var(--red); } .synctag.offline .dot { background: var(--red); }
+  .whoami { display: flex; align-items: center; gap: 10px; }
+  .whoami .userchip { background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 6px 12px; font-size: 0.82rem; display: flex; align-items: center; gap: 7px; max-width: 200px; }
+  .whoami .userchip span.n { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .whoami .role-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--copper); flex-shrink: 0; }
+  .whoami .role-dot.staff { background: var(--teal); }
+  .whoami button { background: transparent; border: 1px solid var(--line); color: var(--muted); padding: 6px 11px; border-radius: 7px; font-size: 0.78rem; cursor: pointer; font-family: var(--font-body); }
+  main { max-width: 900px; margin: 0 auto; padding: 20px 16px 60px; }
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-bottom: 24px; }
+  .stat { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; }
+  .stat .label { font-size: 0.78rem; color: var(--muted); }
+  .stat .value { font-family: var(--font-head); font-size: 1.4rem; font-weight: 700; margin-top: 4px; }
+  .stat.income .value { color: var(--teal); } .stat.expense .value { color: var(--red); } .stat.profit .value { color: var(--copper); }
+  .toolbar { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+  .tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+  .tab { border: 1px solid var(--line); background: var(--surface); color: var(--muted); padding: 7px 12px; border-radius: 999px; font-size: 0.82rem; cursor: pointer; }
+  .tab.active { background: var(--copper-dim); color: var(--text); border-color: var(--copper-dim); }
+  button.primary { background: var(--copper); color: #17110a; border: none; padding: 10px 16px; border-radius: 8px; font-weight: 700; font-family: var(--font-body); cursor: pointer; font-size: 0.9rem; }
+  button.primary:hover { background: #d89058; }
+  button.primary:disabled { opacity: 0.5; cursor: default; }
+  .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 18px; margin-bottom: 22px; display: none; }
+  .panel.open { display: block; }
+  .panel h2 { font-family: var(--font-head); font-size: 1.05rem; margin: 0 0 14px; }
+  .field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .field { display: flex; flex-direction: column; gap: 5px; }
+  .field.full { grid-column: 1 / -1; }
+  .field label { font-size: 0.78rem; color: var(--muted); }
+  .field input, .field select, .field textarea { background: var(--surface-2); border: 1px solid var(--line); color: var(--text); border-radius: 7px; padding: 9px 10px; font-family: var(--font-body); font-size: 0.92rem; }
+  .field input:disabled { color: var(--muted); }
+  .field textarea { resize: vertical; min-height: 50px; }
+  .field input:focus, .field select:focus, .field textarea:focus { outline: 2px solid var(--copper); outline-offset: 1px; }
+  .panel .actions { margin-top: 14px; display: flex; gap: 10px; }
+  button.ghost { background: transparent; border: 1px solid var(--line); color: var(--muted); padding: 10px 16px; border-radius: 8px; cursor: pointer; font-family: var(--font-body); }
+  .list { display: flex; flex-direction: column; gap: 10px; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--copper-dim); border-radius: 10px; padding: 14px 16px; }
+  .card[data-status="received"] { border-left-color: var(--muted); }
+  .card[data-status="repairing"] { border-left-color: var(--copper); }
+  .card[data-status="ready"] { border-left-color: var(--teal); }
+  .card[data-status="unrepairable"] { border-left-color: var(--red); }
+  .card[data-status="done"] { border-left-color: var(--green); opacity: 0.85; }
+  .card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+  .card-top .voucher { font-family: var(--font-head); font-size: 0.72rem; color: var(--copper); letter-spacing: 0.3px; }
+  .card-top .device { font-family: var(--font-head); font-weight: 700; font-size: 1rem; margin-top: 1px; }
+  .card-top .customer { color: var(--muted); font-size: 0.85rem; margin-top: 2px; }
+  .badge { font-size: 0.72rem; padding: 3px 9px; border-radius: 999px; white-space: nowrap; border: 1px solid var(--line); color: var(--muted); }
+  .card-issue { font-size: 0.87rem; color: var(--text); margin-top: 8px; }
+  .card-meta { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 10px; font-size: 0.82rem; color: var(--muted); }
+  .card-meta b { color: var(--text); }
+  .card-people { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 6px; font-size: 0.8rem; color: var(--muted); }
+  .card-people b { color: var(--teal); }
+  .card-lastchange { margin-top: 8px; font-size: 0.78rem; color: var(--muted); font-style: italic; }
+  .card-lastchange b { color: var(--copper); font-style: normal; }
+  .card-actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; align-items: center; }
+  .card-actions select { background: var(--surface-2); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; font-size: 0.8rem; font-family: var(--font-body); }
+  .card-actions button.del { background: none; border: 1px solid var(--line); color: var(--red); border-radius: 6px; padding: 6px 10px; font-size: 0.8rem; cursor: pointer; }
+  .card-actions button.histbtn { background: none; border: 1px solid var(--line); color: var(--muted); border-radius: 6px; padding: 6px 10px; font-size: 0.8rem; cursor: pointer; }
+  .history { margin-top: 10px; border-top: 1px dashed var(--line); padding-top: 8px; display: none; }
+  .history.open { display: block; }
+  .history .row { font-size: 0.78rem; color: var(--muted); padding: 3px 0; }
+  .history .row b { color: var(--text); }
+  .empty { text-align: center; color: var(--muted); padding: 40px 20px; font-size: 0.9rem; }
+  .overlay { position: fixed; inset: 0; background: var(--bg); display: flex; align-items: center; justify-content: center; padding: 20px; z-index: 50; }
+  .login-card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 28px 24px; width: 100%; max-width: 360px; text-align: center; }
+  .login-card h2 { font-family: var(--font-head); margin: 0 0 4px; font-size: 1.2rem; }
+  .login-card p.sub { color: var(--muted); font-size: 0.82rem; margin: 0 0 22px; }
+  .google-btn { width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px; background: #fff; color: #1f1f1f; border: 1px solid #dadce0; border-radius: 8px; padding: 11px 16px; font-size: 0.92rem; font-weight: 500; cursor: pointer; font-family: var(--font-body); }
+  .google-btn:disabled { opacity: 0.6; cursor: default; }
+  .login-err { color: var(--red); font-size: 0.82rem; margin-top: 14px; }
+  .login-hint { margin-top: 16px; font-size: 0.74rem; color: var(--muted); }
+  .staff-row { display: flex; justify-content: space-between; align-items: center; padding: 9px 0; border-bottom: 1px solid var(--line); gap: 8px; }
+  .staff-row:last-child { border-bottom: none; }
+  .staff-row .name { font-weight: 500; font-size: 0.88rem; }
+  .staff-row .email { color: var(--muted); font-size: 0.76rem; display: block; }
+  .staff-row .role-tag { font-size: 0.72rem; color: var(--muted); margin-left: 6px; }
+  .staff-row button { background: none; border: 1px solid var(--line); color: var(--red); border-radius: 6px; padding: 5px 10px; font-size: 0.76rem; cursor: pointer; flex-shrink: 0; }
+</style>
+</head>
+<body>
+
+<div class="overlay" id="loginOverlay">
+  <div class="login-card">
+    <h2>⚡ ပစ္စည်းပြင်ဆင်မှု မှတ်တမ်း</h2>
+    <p class="sub" id="loginSub">ချိတ်ဆက်နေသည်...</p>
+    <button class="google-btn" id="googleBtn" disabled>
+      <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3c-1.6 4.7-6.1 8-11.3 8-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.1 8 3l6-6C34.5 5.5 29.6 3.5 24 3.5 12.7 3.5 3.5 12.7 3.5 24S12.7 44.5 24 44.5 44.5 35.3 44.5 24c0-1.2-.1-2.4-.3-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.6 15.9 18.9 13 24 13c3.1 0 5.8 1.1 8 3l6-6C34.5 5.5 29.6 3.5 24 3.5c-7.5 0-14 4.2-17.3 10.3z"/><path fill="#4CAF50" d="M24 44.5c5.5 0 10.4-1.9 13.9-5.1l-6.4-5.4c-2 1.4-4.6 2.3-7.5 2.3-5.2 0-9.6-3.3-11.2-7.9l-6.5 5C9.9 40.2 16.4 44.5 24 44.5z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.3-2.2 4.2-4.1 5.6l6.4 5.4C41.5 35.6 44.5 30.2 44.5 24c0-1.2-.1-2.4-.3-3.5z"/></svg>
+      <span id="googleBtnText">ချိတ်ဆက်နေသည်...</span>
+    </button>
+    <div class="login-err" id="loginErr"></div>
+    <div class="login-hint">Gmail account နဲ့ Sign in ဝင်ပါ</div>
+  </div>
+</div>
+
+<header>
+  <div>
+    <h1>⚡ ပစ္စည်းပြင်ဆင်မှု မှတ်တမ်း</h1>
+    <p>Electronics Service — အဝင်အထွက် / ဝင်ငွေထွက်ငွေ / အခြေအနေ</p>
+    <div class="synctag offline" id="syncTag"><span class="dot"></span><span id="syncText">ချိတ်ဆက်နေသည်...</span></div>
+  </div>
+  <div class="whoami" id="whoamiBox" style="display:none;">
+    <span class="userchip"><span class="role-dot" id="roleDot"></span><span class="n" id="whoName"></span></span>
+    <button id="manageStaffBtn" style="display:none;">ဝန်ထမ်းစီမံမည်</button>
+    <button id="logoutBtn">ထွက်မည်</button>
+  </div>
+</header>
+
+<main>
+  <div class="stats" id="statsBar" style="display:none;">
+    <div class="stat"><div class="label">စက်ပစ္စည်း (အားလုံး)</div><div class="value" id="statTotal">0</div></div>
+    <div class="stat income"><div class="label">ဝင်ငွေ (ပြီးစီးမှု)</div><div class="value" id="statIncome">0</div></div>
+    <div class="stat expense"><div class="label">အပိုပစ္စည်းကုန်ကျစရိတ်</div><div class="value" id="statExpense">0</div></div>
+    <div class="stat profit"><div class="label">လက်ကျန်အမြတ်ငွေ</div><div class="value" id="statProfit">0</div></div>
+  </div>
+
+  <div class="panel" id="staffPanel">
+    <h2>ဝန်ထမ်းစီမံမှု</h2>
+    <div id="staffList"></div>
+    <div class="field-grid" style="margin-top:14px;">
+      <div class="field full"><label>ဝန်ထမ်း Gmail လိပ်စာ</label><input id="newStaffEmail" type="email" placeholder="aungaung@gmail.com"></div>
+    </div>
+    <div class="actions">
+      <button class="primary" id="addStaffBtn">ဝန်ထမ်းထည့်မည်</button>
+      <button class="ghost" id="closeStaffBtn">ပိတ်မည်</button>
+    </div>
+  </div>
+
+  <div class="toolbar" id="toolbarBox" style="display:none;">
+    <div class="tabs" id="tabs">
+      <button class="tab active" data-filter="all">အားလုံး</button>
+      <button class="tab" data-filter="received">လက်ခံရရှိ</button>
+      <button class="tab" data-filter="repairing">ပြင်နေဆဲ</button>
+      <button class="tab" data-filter="ready">ပြင်ပြီး-မယူသေး</button>
+      <button class="tab" data-filter="unrepairable">မပြင်နိုင်</button>
+      <button class="tab" data-filter="done">ပြီးစီး</button>
+    </div>
+    <button class="primary" id="toggleForm">+ ပစ္စည်းအသစ် ထည့်မည်</button>
+  </div>
+
+  <div class="panel" id="formPanel">
+    <h2>ပစ္စည်းအသစ် လက်ခံခြင်း</h2>
+    <div class="field-grid">
+      <div class="field"><label>ဘောင်ချာနံပါတ်</label><input id="fVoucher" type="text" placeholder="V-0001"></div>
+      <div class="field"><label>customer အမည်</label><input id="fCustomer" type="text" placeholder="ဦးအောင်..."></div>
+      <div class="field"><label>ဖုန်းနံပါတ်</label><input id="fPhone" type="text" placeholder="09..."></div>
+      <div class="field"><label>စက်ပစ္စည်း / မော်ဒယ်</label><input id="fDevice" type="text" placeholder="Samsung A54, TV LG..."></div>
+      <div class="field"><label>လက်ခံရက်စွဲ</label><input id="fDate" type="date"></div>
+      <div class="field"><label>လက်ခံသူ</label><input id="fReceivedBy" type="text" placeholder="မြမြ"></div>
+      <div class="field"><label>ပြင်ဆင်မည့်သူ (assign)</label><input id="fTechnician" type="text" placeholder="အောင်အောင်"></div>
+      <div class="field full"><label>ချို့ယွင်းချက် / ပြင်ဆင်ရန်</label><textarea id="fIssue" placeholder="ဖန်သားကွဲ၊ ဘက်ထရီအားနည်း..."></textarea></div>
+      <div class="field"><label>ခန့်မှန်း ပြင်ဆင်ခ (Ks)</label><input id="fQuote" type="number" min="0" placeholder="0"></div>
+      <div class="field"><label>အပိုပစ္စည်း ကုန်ကျစရိတ် (Ks)</label><input id="fParts" type="number" min="0" placeholder="0"></div>
+    </div>
+    <div class="actions">
+      <button class="primary" id="saveBtn">သိမ်းမည်</button>
+      <button class="ghost" id="cancelBtn">မလုပ်တော့ပါ</button>
+    </div>
+  </div>
+
+  <div class="list" id="list"></div>
+</main>
+
+<script>
+  const STATUS_LABEL = {
+    received: 'လက်ခံရရှိ', repairing: 'ပြင်ဆင်နေဆဲ', ready: 'ပြင်ပြီး - မယူသေးပါ',
+    unrepairable: 'မပြင်နိုင်ပါ', done: 'ပြီးစီး (ယူသွားပြီး)'
+  };
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyAMEkGpJRRQkawSVz4jOMGxaj1Vx15Xh70",
+    authDomain: "electronics-service-tracker.firebaseapp.com",
+    projectId: "electronics-service-tracker",
+    storageBucket: "electronics-service-tracker.firebasestorage.app",
+    messagingSenderId: "135354292559",
+    appId: "1:135354292559:web:25087c5a69680598a40d3a"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
+  const auth = firebase.auth();
+
+  let devices = [];
+  let users = [];
+  let currentUser = null; // { email, name, role }
+  let filter = 'all';
+  let devicesListenerStarted = false;
+  let usersListenerStarted = false;
+
+  function escapeHtml(str) { const d = document.createElement('div'); d.textContent = str == null ? '' : str; return d.innerHTML; }
+  function fmt(n) { return Number(n || 0).toLocaleString('en-US') + ' Ks'; }
+  function fmtTime(iso) { if (!iso) return '-'; const d = new Date(iso); return d.toLocaleDateString('en-GB') + ' ' + d.toLocaleTimeString('en-US', {hour:'2-digit', minute:'2-digit'}); }
+
+  const syncTag = document.getElementById('syncTag');
+  const syncText = document.getElementById('syncText');
+  function setSync(online, label) { syncTag.className = 'synctag' + (online ? '' : ' offline'); syncText.textContent = label; }
+
+  /* ---------- GOOGLE SIGN-IN ---------- */
+  const loginOverlay = document.getElementById('loginOverlay');
+  const googleBtn = document.getElementById('googleBtn');
+  const googleBtnText = document.getElementById('googleBtnText');
+  const loginErr = document.getElementById('loginErr');
+  const loginSub = document.getElementById('loginSub');
+
+  googleBtn.disabled = false;
+  googleBtnText.textContent = 'Google နဲ့ Sign in ဝင်မည်';
+  loginSub.textContent = 'Login ဝင်ရောက်ပါ';
+
+  googleBtn.addEventListener('click', async () => {
+    loginErr.textContent = '';
+    googleBtn.disabled = true;
+    googleBtnText.textContent = 'ဖွင့်နေသည်...';
+    try {
+      const provider = new firebase.auth.GoogleAuthProvider();
+      await auth.signInWithPopup(provider);
+    } catch (e) {
+      loginErr.textContent = 'Sign in မအောင်မြင်ပါ: ' + e.message;
+      googleBtn.disabled = false;
+      googleBtnText.textContent = 'Google နဲ့ Sign in ဝင်မည်';
+    }
+  });
+
+  document.getElementById('logoutBtn').addEventListener('click', () => auth.signOut());
+
+  auth.onAuthStateChanged(async (fbUser) => {
+    if (!fbUser) {
+      currentUser = null;
+      document.getElementById('whoamiBox').style.display = 'none';
+      document.getElementById('statsBar').style.display = 'none';
+      document.getElementById('toolbarBox').style.display = 'none';
+      document.getElementById('list').innerHTML = '';
+      loginOverlay.style.display = 'flex';
+      googleBtn.disabled = false;
+      googleBtnText.textContent = 'Google နဲ့ Sign in ဝင်မည်';
+      return;
+    }
+    const email = fbUser.email;
+    loginSub.textContent = 'အတည်ပြုနေသည်...';
+    try {
+      const doc = await db.collection('users').doc(email).get();
+      if (!doc.exists) {
+        // first-ever user becomes owner automatically; otherwise access denied
+        const anyUsers = await db.collection('users').limit(1).get();
+        if (anyUsers.empty) {
+          await db.collection('users').doc(email).set({ email, name: fbUser.displayName || email, role: 'owner' });
+        } else {
+          loginErr.textContent = 'ဒီ Gmail (' + email + ') ကို ဝန်ထမ်းအဖြစ် ပိုင်ရှင်က ခွင့်ပြုမထားသေးပါ။ ပိုင်ရှင်ကို ဆက်သွယ်ပါ။';
+          googleBtnText.textContent = 'Google နဲ့ Sign in ဝင်မည်';
+          googleBtn.disabled = false;
+          await auth.signOut();
+          return;
+        }
+      } else if (!doc.data().name && fbUser.displayName) {
+        await db.collection('users').doc(email).update({ name: fbUser.displayName });
+      }
+      const finalDoc = await db.collection('users').doc(email).get();
+      currentUser = { email, ...finalDoc.data() };
+      loginOverlay.style.display = 'none';
+      afterLogin();
+      startListeners();
+    } catch (e) {
+      loginErr.textContent = 'အမှား: ' + e.message;
+      googleBtn.disabled = false;
+      googleBtnText.textContent = 'Google နဲ့ Sign in ဝင်မည်';
+    }
+  });
+
+  function afterLogin() {
+    document.getElementById('whoamiBox').style.display = 'flex';
+    document.getElementById('toolbarBox').style.display = 'flex';
+    document.getElementById('whoName').textContent = (currentUser.name || currentUser.email) + (currentUser.role === 'owner' ? ' · ပိုင်ရှင်' : ' · ဝန်ထမ်း');
+    document.getElementById('roleDot').className = 'role-dot' + (currentUser.role === 'staff' ? ' staff' : '');
+    document.getElementById('manageStaffBtn').style.display = currentUser.role === 'owner' ? 'inline-block' : 'none';
+    document.getElementById('statsBar').style.display = currentUser.role === 'owner' ? 'grid' : 'none';
+    if (!document.getElementById('fReceivedBy').value) {
+      document.getElementById('fReceivedBy').value = currentUser.name || currentUser.email;
+    }
+    render();
+  }
+
+  function startListeners() {
+    if (!devicesListenerStarted) {
+      devicesListenerStarted = true;
+      db.collection('devices').orderBy('createdAt', 'desc').onSnapshot((snap) => {
+        devices = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        setSync(true, 'ချိတ်ဆက်ပြီး — data auto-sync');
+        if (currentUser) render();
+      }, (err) => setSync(false, 'Firestore error: ' + err.message));
+    }
+    if (!usersListenerStarted && currentUser && currentUser.role === 'owner') {
+      usersListenerStarted = true;
+      db.collection('users').onSnapshot((snap) => {
+        users = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        renderStaffList();
+      });
+    }
+  }
+
+  /* ---------- STAFF ADMIN (owner only) ---------- */
+  const staffPanel = document.getElementById('staffPanel');
+  document.getElementById('manageStaffBtn').addEventListener('click', () => {
+    staffPanel.classList.add('open');
+  });
+  document.getElementById('closeStaffBtn').addEventListener('click', () => staffPanel.classList.remove('open'));
+
+  function renderStaffList() {
+    const el = document.getElementById('staffList');
+    el.innerHTML = users.map(u => `
+      <div class="staff-row">
+        <div><span class="name">${escapeHtml(u.name || u.email)}</span><span class="role-tag">${u.role === 'owner' ? 'ပိုင်ရှင်' : 'ဝန်ထမ်း'}</span><span class="email">${escapeHtml(u.email)}</span></div>
+        ${u.role !== 'owner' ? `<button data-id="${u.id}" class="rmStaff">ဖျက်မည်</button>` : ''}
+      </div>
+    `).join('');
+  }
+
+  document.getElementById('staffList').addEventListener('click', async (e) => {
+    if (e.target.classList.contains('rmStaff')) {
+      const id = e.target.dataset.id;
+      if (confirm('ဒီဝန်ထမ်းကို ဖျက်မှာ သေချာလား?')) {
+        await db.collection('users').doc(id).delete();
+      }
+    }
+  });
+
+  document.getElementById('addStaffBtn').addEventListener('click', async () => {
+    const email = document.getElementById('newStaffEmail').value.trim().toLowerCase();
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      alert('Gmail လိပ်စာ မှန်မှန်ကန်ကန် ရေးပေးပါ');
+      return;
+    }
+    await db.collection('users').doc(email).set({ email, name: '', role: 'staff' });
+    document.getElementById('newStaffEmail').value = '';
+  });
+
+  /* ---------- DEVICE FORM ---------- */
+  const listEl = document.getElementById('list');
+  const formPanel = document.getElementById('formPanel');
+  const toggleFormBtn = document.getElementById('toggleForm');
+  const cancelBtn = document.getElementById('cancelBtn');
+  const saveBtn = document.getElementById('saveBtn');
+  const tabsEl = document.getElementById('tabs');
+
+  document.getElementById('fDate').valueAsDate = new Date();
+
+  function nextVoucherNumber() { return 'V-' + String(devices.length + 1).padStart(4, '0'); }
+
+  toggleFormBtn.addEventListener('click', () => {
+    formPanel.classList.toggle('open');
+    if (formPanel.classList.contains('open')) {
+      if (!document.getElementById('fVoucher').value) document.getElementById('fVoucher').value = nextVoucherNumber();
+      if (!document.getElementById('fReceivedBy').value) document.getElementById('fReceivedBy').value = currentUser ? (currentUser.name || currentUser.email) : '';
+    }
+  });
+  cancelBtn.addEventListener('click', () => { formPanel.classList.remove('open'); clearForm(); });
+
+  function clearForm() {
+    document.getElementById('fVoucher').value = '';
+    document.getElementById('fCustomer').value = '';
+    document.getElementById('fPhone').value = '';
+    document.getElementById('fDevice').value = '';
+    document.getElementById('fReceivedBy').value = currentUser ? (currentUser.name || currentUser.email) : '';
+    document.getElementById('fTechnician').value = '';
+    document.getElementById('fIssue').value = '';
+    document.getElementById('fQuote').value = '';
+    document.getElementById('fParts').value = '';
+    document.getElementById('fDate').valueAsDate = new Date();
+  }
+
+  saveBtn.addEventListener('click', async () => {
+    const device = document.getElementById('fDevice').value.trim();
+    const customer = document.getElementById('fCustomer').value.trim();
+    if (!device || !customer) { alert('customer အမည်နှင့် စက်ပစ္စည်းအမည် ဖြည့်ပေးပါ'); return; }
+    const now = new Date().toISOString();
+    saveBtn.disabled = true;
+    const entry = {
+      voucher: document.getElementById('fVoucher').value.trim() || nextVoucherNumber(),
+      customer,
+      phone: document.getElementById('fPhone').value.trim(),
+      device,
+      receivedBy: document.getElementById('fReceivedBy').value.trim(),
+      technician: document.getElementById('fTechnician').value.trim(),
+      issue: document.getElementById('fIssue').value.trim(),
+      date: document.getElementById('fDate').value,
+      quote: Number(document.getElementById('fQuote').value) || 0,
+      parts: Number(document.getElementById('fParts').value) || 0,
+      status: 'received',
+      createdAt: now,
+      log: [{ from: null, to: 'received', by: currentUser ? (currentUser.name || currentUser.email) : '-', at: now }]
+    };
+    try {
+      await db.collection('devices').add(entry);
+      clearForm();
+      formPanel.classList.remove('open');
+    } catch (e) { alert('Save မအောင်မြင်ပါ: ' + e.message); }
+    saveBtn.disabled = false;
+  });
+
+  tabsEl.addEventListener('click', (e) => {
+    const btn = e.target.closest('.tab');
+    if (!btn) return;
+    filter = btn.dataset.filter;
+    [...tabsEl.children].forEach(t => t.classList.toggle('active', t === btn));
+    render();
+  });
+
+  /* ---------- LIST / CARDS ---------- */
+  function render() {
+    if (!currentUser) return;
+    const filtered = filter === 'all' ? devices : devices.filter(d => d.status === filter);
+    listEl.innerHTML = '';
+    if (filtered.length === 0) {
+      listEl.innerHTML = '<div class="empty">ဒီအခြေအနေမှာ ပစ္စည်းမရှိသေးပါ</div>';
+    } else {
+      filtered.forEach(d => {
+        const lastLog = d.log && d.log.length ? d.log[d.log.length - 1] : null;
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.dataset.status = d.status;
+        card.innerHTML = `
+          <div class="card-top">
+            <div>
+              <div class="voucher">${escapeHtml(d.voucher || '')}</div>
+              <div class="device">${escapeHtml(d.device)}</div>
+              <div class="customer">${escapeHtml(d.customer)}${d.phone ? ' · ' + escapeHtml(d.phone) : ''}</div>
+            </div>
+            <span class="badge">${STATUS_LABEL[d.status]}</span>
+          </div>
+          ${d.issue ? `<div class="card-issue">${escapeHtml(d.issue)}</div>` : ''}
+          <div class="card-people">
+            ${d.receivedBy ? `<span>လက်ခံသူ- <b>${escapeHtml(d.receivedBy)}</b></span>` : ''}
+            ${d.technician ? `<span>ပြင်မည့်သူ- <b>${escapeHtml(d.technician)}</b></span>` : ''}
+          </div>
+          ${currentUser.role === 'owner' ? `
+          <div class="card-meta">
+            <span>လက်ခံ- <b>${d.date || '-'}</b></span>
+            <span>ပြင်ဆင်ခ- <b>${fmt(d.quote)}</b></span>
+            <span>အပိုပစ္စည်း- <b>${fmt(d.parts)}</b></span>
+            <span>အမြတ်- <b>${fmt(d.quote - d.parts)}</b></span>
+          </div>` : ''}
+          ${lastLog ? `<div class="card-lastchange">နောက်ဆုံးပြောင်း- <b>${escapeHtml(lastLog.by)}</b> က "${STATUS_LABEL[lastLog.to]}" သို့ ပြောင်းခဲ့ (${fmtTime(lastLog.at)})</div>` : ''}
+          <div class="card-actions">
+            <select data-id="${d.id}" class="statusSelect">
+              ${Object.entries(STATUS_LABEL).map(([k,v]) => `<option value="${k}" ${k===d.status?'selected':''}>${v}</option>`).join('')}
+            </select>
+            ${d.log && d.log.length > 1 ? `<button class="histbtn" data-id="${d.id}">မှတ်တမ်း (${d.log.length})</button>` : ''}
+            ${currentUser.role === 'owner' ? `<button class="del" data-id="${d.id}">ဖျက်မည်</button>` : ''}
+          </div>
+          <div class="history" id="hist-${d.id}">
+            ${(d.log || []).slice().reverse().map(l => `<div class="row"><b>${escapeHtml(l.by)}</b> — ${l.from ? STATUS_LABEL[l.from] + ' → ' : ''}${STATUS_LABEL[l.to]} <span style="opacity:.7">(${fmtTime(l.at)})</span></div>`).join('')}
+          </div>
+        `;
+        listEl.appendChild(card);
+      });
+    }
+    renderStats();
+  }
+
+  listEl.addEventListener('change', async (e) => {
+    if (e.target.classList.contains('statusSelect')) {
+      const id = e.target.dataset.id;
+      const dev = devices.find(x => x.id === id);
+      const newStatus = e.target.value;
+      if (dev && dev.status !== newStatus) {
+        const now = new Date().toISOString();
+        const logEntry = { from: dev.status, to: newStatus, by: currentUser.name || currentUser.email, at: now };
+        try {
+          await db.collection('devices').doc(id).update({ status: newStatus, log: firebase.firestore.FieldValue.arrayUnion(logEntry) });
+        } catch (err) { alert('Update မအောင်မြင်ပါ: ' + err.message); }
+      }
+    }
+  });
+  listEl.addEventListener('click', async (e) => {
+    if (e.target.classList.contains('del')) {
+      const id = e.target.dataset.id;
+      if (confirm('ဒီပစ္စည်းမှတ်တမ်းကို ဖျက်မှာ သေချာလား?')) { await db.collection('devices').doc(id).delete(); }
+    }
+    if (e.target.classList.contains('histbtn')) {
+      document.getElementById('hist-' + e.target.dataset.id).classList.toggle('open');
+    }
+  });
+
+  function renderStats() {
+    const total = devices.length;
+    const doneDevices = devices.filter(d => d.status === 'done');
+    const income = doneDevices.reduce((s, d) => s + d.quote, 0);
+    const expense = doneDevices.reduce((s, d) => s + d.parts, 0);
+    document.getElementById('statTotal').textContent = total;
+    document.getElementById('statIncome').textContent = fmt(income);
+    document.getElementById('statExpense').textContent = fmt(expense);
+    document.getElementById('statProfit').textContent = fmt(income - expense);
+  }
+</script>
+</body>
+</html>
