@@ -105,6 +105,7 @@
   .list { display: flex; flex-direction: column; gap: 10px; }
   .card { background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--copper-dim); border-radius: 10px; padding: 14px 16px; }
   .card[data-status="received"] { border-left-color: var(--muted); }
+  .card[data-status="checking"] { border-left-color: #7a6a9a; }
   .card[data-status="repairing"] { border-left-color: var(--copper); }
   .card[data-status="waiting_parts"] { border-left-color: #d4a017; }
   .card[data-status="ready"] { border-left-color: var(--teal); }
@@ -152,6 +153,7 @@
   .staff-row .email { color: var(--muted); font-size: 0.76rem; display: block; }
   .staff-row .role-tag { font-size: 0.72rem; color: var(--muted); margin-left: 6px; }
   .staff-row button { background: none; border: 1px solid var(--line); color: var(--red); border-radius: 6px; padding: 5px 10px; font-size: 0.76rem; cursor: pointer; flex-shrink: 0; }
+  .card-actions button.takebtn { background: var(--copper); border: 1px solid var(--copper); color: #fff; border-radius: 6px; padding: 6px 10px; font-size: 0.8rem; cursor: pointer; font-weight: 600; }
   .card-actions button.printbtn { background: none; border: 1px solid var(--line); color: var(--teal); border-radius: 6px; padding: 6px 10px; font-size: 0.8rem; cursor: pointer; }
 
   /* Receipt preview modal */
@@ -276,6 +278,7 @@
     <div class="tabs" id="tabs">
       <button class="tab active" data-filter="all">အားလုံး</button>
       <button class="tab" data-filter="received">လက်ခံရရှိ</button>
+      <button class="tab" data-filter="checking">စစ်ဆေးနေဆဲ</button>
       <button class="tab" data-filter="repairing">ပြင်နေဆဲ</button>
       <button class="tab" data-filter="waiting_parts">အပိုပစ္စည်းစောင့်</button>
       <button class="tab" data-filter="ready">ပြင်ပြီး-မယူသေး</button>
@@ -338,7 +341,7 @@
 
 <script>
   const STATUS_LABEL = {
-    received: 'လက်ခံရရှိ', repairing: 'ပြင်ဆင်နေဆဲ', waiting_parts: 'အပိုပစ္စည်းစောင့်နေ', ready: 'ပြင်ပြီး - မယူသေးပါ',
+    received: 'လက်ခံရရှိ', checking: 'စစ်ဆေးနေဆဲ', repairing: 'ပြင်ဆင်နေဆဲ', waiting_parts: 'အပိုပစ္စည်းစောင့်နေ', ready: 'ပြင်ပြီး - မယူသေးပါ',
     unrepairable: 'မပြင်နိုင်ပါ', done: 'ပြီးစီး (ယူသွားပြီး)'
   };
 
@@ -703,6 +706,7 @@
 
   function exitEdit() {
     editingId = null;
+    document.getElementById('fTechnician').disabled = false;
     document.getElementById('formTitle').textContent = 'ပစ္စည်းအသစ် လက်ခံခြင်း';
     saveBtn.textContent = 'သိမ်းမည်';
     updateEditorBar();
@@ -720,6 +724,7 @@
     document.getElementById('fDate').value = d.date || '';
     document.getElementById('fReceivedBy').value = d.receivedBy || '';
     document.getElementById('fTechnician').value = d.technician || '';
+    document.getElementById('fTechnician').disabled = !!d.technician && currentUser.role !== 'owner';
     document.getElementById('fIssue').value = d.issue || '';
     document.getElementById('fQuote').value = d.quote || '';
     document.getElementById('fParts').value = d.parts || '';
@@ -773,6 +778,7 @@
         date: document.getElementById('fDate').value,
         quote: Number(document.getElementById('fQuote').value) || 0
       };
+      if (old.technician && currentUser.role !== 'owner') nv.technician = old.technician;
       if (currentUser.role === 'owner') nv.parts = Number(document.getElementById('fParts').value) || 0;
       const changes = [];
       for (const k in nv) {
@@ -910,6 +916,7 @@
               ${Object.entries(STATUS_LABEL).map(([k,v]) => `<option value="${k}" ${k===d.status?'selected':''}>${v}</option>`).join('')}
             </select>
             ${d.log && d.log.length > 0 ? `<button class="histbtn" data-id="${d.id}">မှတ်တမ်း (${d.log.length})</button>` : ''}
+            ${(!d.technician && d.status !== 'done' && d.status !== 'unrepairable') ? `<button class="takebtn" data-id="${d.id}">🔧 ပြုပြင်မည်</button>` : ''}
             <button class="editbtn" data-id="${d.id}">✏️ ပြင်မည်</button>
             <button class="printbtn" data-id="${d.id}">🖨 ဘောင်ချာ</button>
             ${currentUser.role === 'owner' ? `<button class="del" data-id="${d.id}">ဖျက်မည်</button>` : ''}
@@ -950,6 +957,35 @@
     }
     if (e.target.classList.contains('histbtn')) {
       document.getElementById('hist-' + e.target.dataset.id).classList.toggle('open');
+    }
+    if (e.target.classList.contains('takebtn')) {
+      const btn = e.target; const id = btn.dataset.id;
+      btn.disabled = true;
+      const myName = currentUser.name || currentUser.email;
+      try {
+        const ref = db.collection('devices').doc(id);
+        const res = await db.runTransaction(async (tx) => {
+          const snap = await tx.get(ref);
+          if (!snap.exists) return 'gone';
+          const cur = snap.data();
+          if (cur.technician) return cur.technician; // တခြားသူ ယူသွားပြီး
+          const now = new Date().toISOString();
+          const upd = {
+            technician: myName,
+            log: firebase.firestore.FieldValue.arrayUnion({ type: 'edit', by: myName, byRole: titleOf(currentUser), at: now, changes: [{ key: 'technician', f: EDIT_LABELS.technician, from: '', to: myName }] })
+          };
+          if (cur.status === 'received') {
+            upd.status = 'checking';
+            upd.log = firebase.firestore.FieldValue.arrayUnion(
+              { type: 'edit', by: myName, byRole: titleOf(currentUser), at: now, changes: [{ key: 'technician', f: EDIT_LABELS.technician, from: '', to: myName }] },
+              { from: 'received', to: 'checking', by: myName, byRole: titleOf(currentUser), at: now }
+            );
+          }
+          tx.update(ref, upd);
+          return null;
+        });
+        if (res && res !== 'gone') alert('ဒီပစ္စည်းကို ' + res + ' က ယူပြီးသားပါ');
+      } catch (err) { alert('လုပ်လို့မရပါ: ' + err.message); btn.disabled = false; }
     }
     if (e.target.classList.contains('editbtn')) {
       openEdit(e.target.dataset.id);
