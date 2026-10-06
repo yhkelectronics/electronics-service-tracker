@@ -413,18 +413,20 @@
     throw new Error('Unauthorized host');
   }
   let license = null; // { active, expiresAt(Date), plan }
+  let licenseLoaded = false; // Firestore က license ကို ဖတ်ပြီးမှ true
   function licenseOk() {
     if (!license || license.active === false || !license.expiresAt) return false;
     return Date.now() < license.expiresAt.getTime();
   }
   function requireLicense() {
     if (licenseOk()) return true;
+    if (!licenseLoaded) { alert('License စစ်ဆေးနေဆဲပါ၊ ခဏစောင့်ပြီး ပြန်ကြိုးစားပါ။'); return false; }
     alert('App သက်တမ်းကုန်နေပါပြီ (သို့) License မရှိပါ။ ဆက်သုံးရန် ဆက်သွယ်ပါ။ ကြည့်ရုံသာ ကြည့်လို့ရပါမယ်။');
     return false;
   }
   function renderLicenseBanner() {
     const el = document.getElementById('licenseBanner');
-    if (!currentUser) { el.style.display = 'none'; return; }
+    if (!currentUser || !licenseLoaded) { el.style.display = 'none'; return; }
     if (!licenseOk()) {
       el.style.cssText = 'display:block;margin:0 0 12px;padding:10px 12px;border-radius:8px;font-size:0.85rem;line-height:1.5;background:#fdecea;color:#a12a22;border:1px solid #f3b8b3;';
       el.textContent = '⛔ App သက်တမ်းကုန်နေပါပြီ (သို့) License မရှိပါ — ကြည့်ရုံသာ ကြည့်လို့ရပါမယ်။ အသစ်ထည့်/ပြင်ဖို့ ဆက်သွယ်ပါ။';
@@ -612,12 +614,14 @@
     if (!licenseListenerStarted) {
       licenseListenerStarted = true;
       db.collection('settings').doc('license').onSnapshot((doc) => {
+        if (!doc.exists && doc.metadata.fromCache) return; // server အဖြေ မရသေးခင် မပြ
+        licenseLoaded = true;
         if (doc.exists) {
           const d = doc.data(); const x = d.expiresAt;
           license = { active: d.active !== false, plan: d.plan || '', expiresAt: x ? (x.toDate ? x.toDate() : new Date(x)) : null };
         } else license = null;
         renderLicenseBanner();
-      }, () => { license = null; renderLicenseBanner(); });
+      }, () => { license = null; licenseLoaded = true; renderLicenseBanner(); });
     }
     if (!usersListenerStarted && currentUser && currentUser.role === 'owner') {
       db.collection('staffRequests').onSnapshot((snap) => {
