@@ -35,8 +35,11 @@
     display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: nowrap;
   }
   header h1 { font-family: var(--font-head); font-weight: 700; font-size: 1.4rem; line-height: 1.35; margin: 0 0 3px; letter-spacing: 0.2px; }
-  header p { margin: 0; color: var(--muted); font-size: 0.85rem; }
-  .synctag { display: inline-flex; align-items: center; gap: 5px; font-size: 0.72rem; color: var(--teal); margin-top: 6px; }
+  header p { margin: 0; color: var(--muted); font-size: 0.9rem; font-family: var(--font-head); font-weight: 500; line-height: 1.5; }
+  .brand { display: flex; align-items: flex-start; gap: 10px; }
+  .brand .logo { font-size: 1.9rem; line-height: 1.2; flex-shrink: 0; }
+  .brand-text { min-width: 0; }
+  .synctag { display: none !important; align-items: center; gap: 5px; font-size: 0.72rem; color: var(--teal); margin-top: 6px; }
   .synctag .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--teal); }
   .synctag.offline { color: var(--red); } .synctag.offline .dot { background: var(--red); }
   .whoami { display: flex; align-items: center; gap: 10px; }
@@ -47,7 +50,7 @@
   .whoami .role-dot.staff { background: var(--teal); }
   .whoami button { background: transparent; border: 1px solid var(--line); color: var(--muted); padding: 6px 11px; border-radius: 7px; font-size: 0.78rem; cursor: pointer; font-family: var(--font-body); }
   .menu-wrap { position: relative; }
-  .menu-btn { background: var(--surface); border: 1px solid var(--line); color: var(--text); width: 42px; height: 42px; border-radius: 10px; font-size: 1.3rem; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; }
+  .menu-btn { font-weight: 700; font-family: var(--font-head); border-radius: 50% !important; background: var(--surface); border: 1px solid var(--line); color: var(--text); width: 42px; height: 42px; border-radius: 10px; font-size: 1.3rem; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; }
   .menu-pop { display: none; position: absolute; right: 0; top: 48px; min-width: 210px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 6px; z-index: 40; box-shadow: 0 10px 30px rgba(0,0,0,.5); }
   .menu-pop.open { display: block; }
   .menu-pop button { display: block; width: 100%; text-align: left; background: transparent; border: none; color: var(--text); padding: 11px 12px; border-radius: 8px; font-size: 0.9rem; }
@@ -201,9 +204,13 @@
 
 <header>
   <div class="hl">
-    <h1 id="hdrTitle">⚡ ပစ္စည်းပြင်ဆင်မှု မှတ်တမ်း</h1>
-    <p id="hdrDesc">Electronics Service — အဝင်အထွက် / ဝင်ငွေထွက်ငွေ / အခြေအနေ</p>
-    <span class="userchip" id="userChip" title="နာမည်ပြင်ရန် နှိပ်ပါ" style="display:none;"><span class="role-dot" id="roleDot"></span><span class="n" id="whoName"></span></span>
+    <div class="brand">
+      <span class="logo">⚡</span>
+      <div class="brand-text">
+        <h1 id="hdrTitle">ပစ္စည်းပြင်ဆင်မှု မှတ်တမ်း</h1>
+        <p id="hdrDesc">Electronics Service — အဝင်အထွက် / ဝင်ငွေထွက်ငွေ / အခြေအနေ</p>
+      </div>
+    </div>
     <div class="searchrow" id="searchRow" style="margin:10px 0 0;">
     <input id="searchBox" type="search" placeholder="ဘောင်ချာ / customer / ဖုန်း / စက် ရှာရန်...">
     <select id="sortSel"><option value="new">အသစ်ဆုံးအရင်</option><option value="old">အဟောင်းဆုံးအရင်</option></select>
@@ -211,9 +218,10 @@
     <div class="synctag offline" id="syncTag"><span class="dot"></span><span id="syncText">ချိတ်ဆက်နေသည်...</span></div>
   </div>
   <div class="menu-wrap" id="whoamiBox" style="display:none;">
-    <button class="menu-btn" id="menuBtn" aria-label="Menu">☰<span class="bdot" id="menuDot"></span></button>
+    <button class="menu-btn" id="menuBtn" aria-label="Menu"><span id="avatarLetter">☰</span><span class="bdot" id="menuDot"></span></button>
     <div class="menu-pop" id="menuPop">
       <div class="who"><b id="menuName"></b><span id="menuRole"></span></div>
+      <button id="renameBtn" style="display:none;">✏️ နာမည်ပြင်မည်</button>
       <button id="dashBtn" style="display:none;">📊 Dashboard</button>
       <button id="shopSettingsBtn" style="display:none;">🏪 ဆိုင်အချက်အလက်</button>
       <button id="manageStaffBtn" style="display:none;">👥 ဝန်ထမ်းစီမံမည်</button>
@@ -363,7 +371,7 @@
   function titleOf(u) { return !u ? '' : (u.role === 'owner' ? 'ပိုင်ရှင်' : (u.position || 'ဝန်ထမ်း')); }
   function meLabel() { return currentUser ? (currentUser.name || currentUser.email) + ' (' + titleOf(currentUser) + ')' : '-'; }
   function applyShopHeader() {
-    document.getElementById('hdrTitle').textContent = '⚡ ' + (shopInfo.name || 'ပစ္စည်းပြင်ဆင်မှု မှတ်တမ်း');
+    document.getElementById('hdrTitle').textContent = (shopInfo.name || 'ပစ္စည်းပြင်ဆင်မှု မှတ်တမ်း');
     document.getElementById('hdrDesc').textContent = shopInfo.desc || 'Electronics Service — အဝင်အထွက် / ဝင်ငွေထွက်ငွေ / အခြေအနေ';
     if (shopInfo.name) document.title = shopInfo.name;
   }
@@ -462,7 +470,7 @@
   menuPop.addEventListener('click', () => menuPop.classList.remove('open'));
   document.getElementById('logoutBtn').addEventListener('click', () => auth.signOut());
 
-  document.getElementById('userChip').addEventListener('click', async () => {
+  document.getElementById('renameBtn').addEventListener('click', async () => {
     if (!currentUser || currentUser.role !== 'owner') return;
     const n = prompt('သင့်နာမည် (မှတ်တမ်းမှာ ဒီနာမည်နဲ့ ပေါ်မယ်)', currentUser.name || '');
     if (n === null || !n.trim()) return;
@@ -477,8 +485,7 @@
     if (!fbUser) {
       currentUser = null;
       document.getElementById('whoamiBox').style.display = 'none';
-      document.getElementById('userChip').style.display = 'none';
-      document.getElementById('statsBar').style.display = 'none';
+        document.getElementById('statsBar').style.display = 'none';
       document.getElementById('toolbarBox').style.display = 'none';
       document.getElementById('searchRow').style.display = 'none';
       document.getElementById('list').innerHTML = '';
@@ -514,14 +521,13 @@
     document.getElementById('whoamiBox').style.display = 'flex';
     document.getElementById('toolbarBox').style.display = 'flex';
     document.getElementById('searchRow').style.display = 'flex';
-    document.getElementById('userChip').style.display = 'inline-flex';
-    document.getElementById('userChip').style.cursor = currentUser.role === 'owner' ? 'pointer' : 'default';
-    document.getElementById('userChip').title = currentUser.role === 'owner' ? 'နာမည်ပြင်ရန် နှိပ်ပါ' : '';
-    document.getElementById('whoName').textContent = (currentUser.name || currentUser.email) + ' · ' + titleOf(currentUser);
     document.getElementById('menuName').textContent = currentUser.name || currentUser.email;
     document.getElementById('menuRole').textContent = titleOf(currentUser) + ' · ' + currentUser.email;
     applyShopHeader(); updateEditorBar();
-    document.getElementById('roleDot').className = 'role-dot' + (currentUser.role === 'staff' ? ' staff' : '');
+    { const g = splitGraphemes((currentUser.name || currentUser.email || '?').trim())[0] || '?';
+      document.getElementById('avatarLetter').textContent = g.toUpperCase();
+      document.getElementById('menuBtn').style.background = currentUser.role === 'owner' ? 'var(--copper-dim)' : '#2f6b63'; }
+    document.getElementById('renameBtn').style.display = currentUser.role === 'owner' ? 'inline-block' : 'none';
     document.getElementById('manageStaffBtn').style.display = currentUser.role === 'owner' ? 'inline-block' : 'none';
     document.getElementById('dashBtn').style.display = currentUser.role === 'owner' ? 'inline-block' : 'none';
     document.getElementById('shopSettingsBtn').style.display = currentUser.role === 'owner' ? 'inline-block' : 'none';
