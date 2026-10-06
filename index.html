@@ -32,19 +32,32 @@
   header {
     padding: 20px 20px 16px; border-bottom: 1px solid var(--line);
     background: linear-gradient(180deg, #161b22, var(--bg));
-    display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap;
+    display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: nowrap;
   }
-  header h1 { font-family: var(--font-head); font-weight: 700; font-size: 1.4rem; margin: 0 0 3px; letter-spacing: 0.2px; }
+  header h1 { font-family: var(--font-head); font-weight: 700; font-size: 1.4rem; line-height: 1.35; margin: 0 0 3px; letter-spacing: 0.2px; }
   header p { margin: 0; color: var(--muted); font-size: 0.85rem; }
   .synctag { display: inline-flex; align-items: center; gap: 5px; font-size: 0.72rem; color: var(--teal); margin-top: 6px; }
   .synctag .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--teal); }
   .synctag.offline { color: var(--red); } .synctag.offline .dot { background: var(--red); }
   .whoami { display: flex; align-items: center; gap: 10px; }
-  .whoami .userchip { background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 6px 12px; font-size: 0.82rem; display: flex; align-items: center; gap: 7px; max-width: 200px; }
+  header .userchip { margin-top: 10px; cursor: pointer; width: fit-content; }
+  .whoami .userchip, header .userchip { background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 6px 12px; font-size: 0.82rem; display: flex; align-items: center; gap: 7px; max-width: 200px; }
   .whoami .userchip span.n { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .whoami .role-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--copper); flex-shrink: 0; }
   .whoami .role-dot.staff { background: var(--teal); }
   .whoami button { background: transparent; border: 1px solid var(--line); color: var(--muted); padding: 6px 11px; border-radius: 7px; font-size: 0.78rem; cursor: pointer; font-family: var(--font-body); }
+  .menu-wrap { position: relative; }
+  .menu-btn { background: var(--surface); border: 1px solid var(--line); color: var(--text); width: 42px; height: 42px; border-radius: 10px; font-size: 1.3rem; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; }
+  .menu-pop { display: none; position: absolute; right: 0; top: 48px; min-width: 210px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 6px; z-index: 40; box-shadow: 0 10px 30px rgba(0,0,0,.5); }
+  .menu-pop.open { display: block; }
+  .menu-pop button { display: block; width: 100%; text-align: left; background: transparent; border: none; color: var(--text); padding: 11px 12px; border-radius: 8px; font-size: 0.9rem; }
+  .menu-pop button:hover { background: var(--surface-2); }
+  .menu-pop button.danger { color: var(--red); }
+  .menu-pop .who { padding: 8px 12px 10px; border-bottom: 1px solid var(--line); margin-bottom: 4px; font-size: 0.8rem; color: var(--muted); }
+  .menu-pop .who b { display: block; color: var(--text); font-size: 0.9rem; }
+  header .hl { flex: 1; min-width: 0; }
+  .editor-bar { grid-column: 1 / -1; background: var(--surface-2); border: 1px dashed var(--line); border-radius: 8px; padding: 8px 10px; font-size: 0.82rem; color: var(--muted); }
+  .editor-bar b { color: var(--teal); }
   main { max-width: 900px; margin: 0 auto; padding: 20px 16px 60px; }
   .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-bottom: 24px; }
   .stat { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; }
@@ -158,16 +171,20 @@
 </div>
 
 <header>
-  <div>
-    <h1>⚡ ပစ္စည်းပြင်ဆင်မှု မှတ်တမ်း</h1>
-    <p>Electronics Service — အဝင်အထွက် / ဝင်ငွေထွက်ငွေ / အခြေအနေ</p>
+  <div class="hl">
+    <h1 id="hdrTitle">⚡ ပစ္စည်းပြင်ဆင်မှု မှတ်တမ်း</h1>
+    <p id="hdrDesc">Electronics Service — အဝင်အထွက် / ဝင်ငွေထွက်ငွေ / အခြေအနေ</p>
+    <span class="userchip" id="userChip" title="နာမည်ပြင်ရန် နှိပ်ပါ" style="display:none;"><span class="role-dot" id="roleDot"></span><span class="n" id="whoName"></span></span>
     <div class="synctag offline" id="syncTag"><span class="dot"></span><span id="syncText">ချိတ်ဆက်နေသည်...</span></div>
   </div>
-  <div class="whoami" id="whoamiBox" style="display:none;">
-    <span class="userchip" id="userChip" title="နာမည်ပြင်ရန် နှိပ်ပါ" style="cursor:pointer;"><span class="role-dot" id="roleDot"></span><span class="n" id="whoName"></span></span>
-    <button id="shopSettingsBtn" style="display:none;">ဆိုင်အချက်အလက်</button>
-    <button id="manageStaffBtn" style="display:none;">ဝန်ထမ်းစီမံမည်</button>
-    <button id="logoutBtn">ထွက်မည်</button>
+  <div class="menu-wrap" id="whoamiBox" style="display:none;">
+    <button class="menu-btn" id="menuBtn" aria-label="Menu">☰</button>
+    <div class="menu-pop" id="menuPop">
+      <div class="who"><b id="menuName"></b><span id="menuRole"></span></div>
+      <button id="shopSettingsBtn" style="display:none;">🏪 ဆိုင်အချက်အလက်</button>
+      <button id="manageStaffBtn" style="display:none;">👥 ဝန်ထမ်းစီမံမည်</button>
+      <button id="logoutBtn" class="danger">⎋ ထွက်မည်</button>
+    </div>
   </div>
 </header>
 
@@ -183,6 +200,7 @@
     <h2>ဆိုင်အချက်အလက် (ဘောင်ချာပေါ်မှာ ပေါ်မယ်)</h2>
     <div class="field-grid">
       <div class="field full"><label>ဆိုင်အမည်</label><input id="shopName" type="text" placeholder="ဆိုင်နာမည်"></div>
+      <div class="field full"><label>Description (ဆိုင်ရဲ့ လုပ်ငန်းအကြောင်း)</label><input id="shopDesc" type="text" placeholder="လျှပ်စစ်ပစ္စည်းအမျိုးမျိုး ပြုပြင်ရေး"></div>
       <div class="field full"><label>ဖုန်းနံပါတ်</label><input id="shopPhone" type="text" placeholder="09..."></div>
       <div class="field full"><label>လိပ်စာ</label><textarea id="shopAddress" placeholder="လိပ်စာ"></textarea></div>
     </div>
@@ -226,6 +244,7 @@
   <div class="panel" id="formPanel">
     <h2 id="formTitle">ပစ္စည်းအသစ် လက်ခံခြင်း</h2>
     <div class="field-grid">
+      <div class="editor-bar" id="editorBar"></div>
       <div class="field"><label>ဘောင်ချာနံပါတ်</label><input id="fVoucher" type="text" placeholder="V-0001"></div>
       <div class="field"><label>customer အမည်</label><input id="fCustomer" type="text" placeholder="ဦးအောင်..."></div>
       <div class="field"><label>ဖုန်းနံပါတ်</label><input id="fPhone" type="text" placeholder="09..."></div>
@@ -250,6 +269,7 @@
   <div class="modal-box">
     <div class="paper" id="receiptArea">
       <div class="r-shop" id="rShop"></div>
+      <div class="r-addr" id="rDesc"></div>
       <div class="r-addr" id="rAddr"></div>
       <div class="r-addr" id="rShopPhone"></div>
       <div class="r-sub" id="rDate"></div>
@@ -298,9 +318,19 @@
   let devicesListenerStarted = false;
   let usersListenerStarted = false;
   let settingsListenerStarted = false;
-  let shopInfo = { name: '', phone: '', address: '' };
+  let shopInfo = { name: '', desc: '', phone: '', address: '' };
   try { const c = JSON.parse(localStorage.getItem('shopInfo') || 'null'); if (c) shopInfo = { ...shopInfo, ...c }; } catch (e) {}
 
+  const ROLE_LABEL = { owner: 'ပိုင်ရှင်', staff: 'ဝန်ထမ်း' };
+  function roleOf(r) { return ROLE_LABEL[r] || r || ''; }
+  function meLabel() { return currentUser ? (currentUser.name || currentUser.email) + ' (' + roleOf(currentUser.role) + ')' : '-'; }
+  function applyShopHeader() {
+    document.getElementById('hdrTitle').textContent = '⚡ ' + (shopInfo.name || 'ပစ္စည်းပြင်ဆင်မှု မှတ်တမ်း');
+    document.getElementById('hdrDesc').textContent = shopInfo.desc || 'Electronics Service — အဝင်အထွက် / ဝင်ငွေထွက်ငွေ / အခြေအနေ';
+    if (shopInfo.name) document.title = shopInfo.name;
+  }
+  function updateEditorBar() { const e = document.getElementById('editorBar'); if (e) e.innerHTML = (editingId ? 'ပြင်ဆင်သူ' : 'မှတ်သားသူ') + ': <b>' + escapeHtml(meLabel()) + '</b>'; }
+  document.addEventListener('DOMContentLoaded', () => { applyShopHeader(); });
   function escapeHtml(str) { const d = document.createElement('div'); d.textContent = str == null ? '' : str; return d.innerHTML; }
   function fmt(n) { return Number(n || 0).toLocaleString('en-US') + ' Ks'; }
   function fmtTime(iso) { if (!iso) return '-'; const d = new Date(iso); return d.toLocaleDateString('en-GB') + ' ' + d.toLocaleTimeString('en-US', {hour:'2-digit', minute:'2-digit'}); }
@@ -334,6 +364,10 @@
     }
   });
 
+  const menuPop = document.getElementById('menuPop');
+  document.getElementById('menuBtn').addEventListener('click', (e) => { e.stopPropagation(); menuPop.classList.toggle('open'); });
+  document.addEventListener('click', (e) => { if (!menuPop.contains(e.target)) menuPop.classList.remove('open'); });
+  menuPop.addEventListener('click', () => menuPop.classList.remove('open'));
   document.getElementById('logoutBtn').addEventListener('click', () => auth.signOut());
 
   document.getElementById('userChip').addEventListener('click', async () => {
@@ -351,6 +385,7 @@
     if (!fbUser) {
       currentUser = null;
       document.getElementById('whoamiBox').style.display = 'none';
+      document.getElementById('userChip').style.display = 'none';
       document.getElementById('statsBar').style.display = 'none';
       document.getElementById('toolbarBox').style.display = 'none';
       document.getElementById('searchRow').style.display = 'none';
@@ -389,7 +424,11 @@
     document.getElementById('whoamiBox').style.display = 'flex';
     document.getElementById('toolbarBox').style.display = 'flex';
     document.getElementById('searchRow').style.display = 'flex';
-    document.getElementById('whoName').textContent = (currentUser.name || currentUser.email) + (currentUser.role === 'owner' ? ' · ပိုင်ရှင်' : ' · ဝန်ထမ်း');
+    document.getElementById('userChip').style.display = 'inline-flex';
+    document.getElementById('whoName').textContent = (currentUser.name || currentUser.email) + ' · ' + roleOf(currentUser.role);
+    document.getElementById('menuName').textContent = currentUser.name || currentUser.email;
+    document.getElementById('menuRole').textContent = roleOf(currentUser.role) + ' · ' + currentUser.email;
+    applyShopHeader(); updateEditorBar();
     document.getElementById('roleDot').className = 'role-dot' + (currentUser.role === 'staff' ? ' staff' : '');
     document.getElementById('manageStaffBtn').style.display = currentUser.role === 'owner' ? 'inline-block' : 'none';
     document.getElementById('shopSettingsBtn').style.display = currentUser.role === 'owner' ? 'inline-block' : 'none';
@@ -415,6 +454,7 @@
         if (doc.exists) {
           shopInfo = { ...shopInfo, ...doc.data() };
           try { localStorage.setItem('shopInfo', JSON.stringify(shopInfo)); } catch (e) {}
+          applyShopHeader();
         }
       }, (err) => console.warn('settings read error', err.message));
     }
@@ -431,6 +471,7 @@
   const shopPanel = document.getElementById('shopPanel');
   document.getElementById('shopSettingsBtn').addEventListener('click', () => {
     document.getElementById('shopName').value = shopInfo.name || '';
+    document.getElementById('shopDesc').value = shopInfo.desc || '';
     document.getElementById('shopPhone').value = shopInfo.phone || '';
     document.getElementById('shopAddress').value = shopInfo.address || '';
     shopPanel.classList.add('open');
@@ -440,10 +481,11 @@
   document.getElementById('saveShopBtn').addEventListener('click', async () => {
     const data = {
       name: document.getElementById('shopName').value.trim(),
+      desc: document.getElementById('shopDesc').value.trim(),
       phone: document.getElementById('shopPhone').value.trim(),
       address: document.getElementById('shopAddress').value.trim()
     };
-    shopInfo = data;
+    shopInfo = data; applyShopHeader();
     try { localStorage.setItem('shopInfo', JSON.stringify(data)); } catch (e) {}
     try {
       await db.collection('settings').doc('shop').set(data);
@@ -521,6 +563,7 @@
     editingId = null;
     document.getElementById('formTitle').textContent = 'ပစ္စည်းအသစ် လက်ခံခြင်း';
     saveBtn.textContent = 'သိမ်းမည်';
+    updateEditorBar();
     document.getElementById('fParts').closest('.field').style.display = '';
   }
 
@@ -541,6 +584,7 @@
     document.getElementById('fParts').closest('.field').style.display = currentUser.role === 'owner' ? '' : 'none';
     document.getElementById('formTitle').textContent = 'ပစ္စည်းအချက်အလက် ပြင်ဆင်ခြင်း — ' + (d.voucher || '');
     saveBtn.textContent = 'ပြင်ပြီးသိမ်းမည်';
+    updateEditorBar();
     formPanel.classList.add('open');
     formPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
@@ -549,6 +593,7 @@
     if (editingId) { exitEdit(); clearForm(); formPanel.classList.remove('open'); return; }
     formPanel.classList.toggle('open');
     if (formPanel.classList.contains('open')) {
+      updateEditorBar();
       if (!document.getElementById('fVoucher').value) document.getElementById('fVoucher').value = nextVoucherNumber();
       if (!document.getElementById('fReceivedBy').value) document.getElementById('fReceivedBy').value = currentUser ? (currentUser.name || currentUser.email) : '';
     }
@@ -595,7 +640,7 @@
       if (!changes.length) { exitEdit(); clearForm(); formPanel.classList.remove('open'); return; }
       saveBtn.disabled = true;
       try {
-        const entry2 = { type: 'edit', by: currentUser.name || currentUser.email, at: new Date().toISOString(), changes };
+        const entry2 = { type: 'edit', by: currentUser.name || currentUser.email, byRole: currentUser.role, at: new Date().toISOString(), changes };
         await db.collection('devices').doc(editingId).update({ ...nv, log: firebase.firestore.FieldValue.arrayUnion(entry2) });
         exitEdit(); clearForm(); formPanel.classList.remove('open');
       } catch (e) { alert('ပြင်လို့ မအောင်မြင်ပါ: ' + e.message); }
@@ -617,7 +662,7 @@
       parts: Number(document.getElementById('fParts').value) || 0,
       status: 'received',
       createdAt: now,
-      log: [{ from: null, to: 'received', by: currentUser ? (currentUser.name || currentUser.email) : '-', at: now }]
+      log: [{ from: null, to: 'received', by: currentUser ? (currentUser.name || currentUser.email) : '-', byRole: currentUser ? currentUser.role : '', at: now }]
     };
     try {
       await db.collection('devices').add(entry);
@@ -649,7 +694,7 @@
   }
   function dayLabel(n) { return n === null ? '' : (n === 0 ? 'ယနေ့' : n + ' ရက်'); }
   function logRowHtml(l) {
-    const who = `<b>${escapeHtml(l.by)}</b>`;
+    const who = `<b>${escapeHtml(l.by)}</b>${l.byRole ? ' <span style="opacity:.7">(' + roleOf(l.byRole) + ')</span>' : ''}`;
     const t = `<span style="opacity:.7">(${fmtTime(l.at)})</span>`;
     if (l.type === 'edit') {
       const txt = (l.changes || []).map(c => {
@@ -717,7 +762,7 @@
             <span>အပိုပစ္စည်း- <b>${fmt(d.parts)}</b></span>
             <span>အမြတ်- <b>${fmt(d.quote - d.parts)}</b></span>
           </div>` : ''}
-          ${lastLog ? `<div class="card-lastchange">နောက်ဆုံးပြောင်း- <b>${escapeHtml(lastLog.by)}</b> က ${lastLog.type === 'edit' ? 'အချက်အလက် ပြင်ခဲ့' : '"' + STATUS_LABEL[lastLog.to] + '" သို့ ပြောင်းခဲ့'} (${fmtTime(lastLog.at)})</div>` : ''}
+          ${lastLog ? `<div class="card-lastchange">နောက်ဆုံးပြောင်း- <b>${escapeHtml(lastLog.by)}${lastLog.byRole ? ' (' + roleOf(lastLog.byRole) + ')' : ''}</b> က ${lastLog.type === 'edit' ? 'အချက်အလက် ပြင်ခဲ့' : '"' + STATUS_LABEL[lastLog.to] + '" သို့ ပြောင်းခဲ့'} (${fmtTime(lastLog.at)})</div>` : ''}
           <div class="card-actions">
             <select data-id="${d.id}" class="statusSelect">
               ${Object.entries(STATUS_LABEL).map(([k,v]) => `<option value="${k}" ${k===d.status?'selected':''}>${v}</option>`).join('')}
@@ -744,7 +789,7 @@
       const newStatus = e.target.value;
       if (dev && dev.status !== newStatus) {
         const now = new Date().toISOString();
-        const logEntry = { from: dev.status, to: newStatus, by: currentUser.name || currentUser.email, at: now };
+        const logEntry = { from: dev.status, to: newStatus, by: currentUser.name || currentUser.email, byRole: currentUser.role, at: now };
         const upd = { status: newStatus, log: firebase.firestore.FieldValue.arrayUnion(logEntry) };
         if (newStatus === 'waiting_parts') {
           const p = prompt('ဘာအပိုပစ္စည်း စောင့်နေတာလဲ? (မရေးလည်းရပါတယ်)', dev.partsNeeded || '');
@@ -829,6 +874,11 @@
     };
 
     center(shopInfo.name || 'Electronics Service', 700, 30);
+    if (shopInfo.desc) {
+      setFont(400, 20); ctx.textAlign = 'center';
+      wrapText(ctx, shopInfo.desc, W - PAD * 2).forEach(l => { ctx.fillText(l, W / 2, y); y += 28; });
+      y += 4;
+    }
     if (shopInfo.address) {
       setFont(400, 20); ctx.textAlign = 'center';
       wrapText(ctx, shopInfo.address, W - PAD * 2).forEach(l => { ctx.fillText(l, W / 2, y); y += 28; });
@@ -903,6 +953,7 @@
     if (!d) return;
     currentReceiptId = id;
     document.getElementById('rShop').textContent = shopInfo.name || 'Electronics Service';
+    document.getElementById('rDesc').textContent = shopInfo.desc || '';
     document.getElementById('rAddr').textContent = shopInfo.address || '';
     document.getElementById('rShopPhone').textContent = shopInfo.phone ? 'ဖုန်း: ' + shopInfo.phone : '';
     document.getElementById('rDate').textContent = fmtTime(d.createdAt || d.date);
