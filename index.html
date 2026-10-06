@@ -274,6 +274,8 @@
     </div>
   </div>
 
+  <div id="licenseBanner" style="display:none;margin:0 0 12px;padding:10px 12px;border-radius:8px;font-size:0.85rem;line-height:1.5;"></div>
+
   <div class="toolbar" id="toolbarBox" style="display:none;">
     <div class="tabs" id="tabs">
       <button class="tab active" data-filter="all">အားလုံး</button>
@@ -366,6 +368,7 @@
   let devicesListenerStarted = false;
   let usersListenerStarted = false;
   let settingsListenerStarted = false;
+  let licenseListenerStarted = false;
   let shopInfo = { name: '', desc: '', phone: '', address: '' };
   try { const c = JSON.parse(localStorage.getItem('shopInfo') || 'null'); if (c) shopInfo = { ...shopInfo, ...c }; } catch (e) {}
 
@@ -387,6 +390,38 @@
   const syncTag = document.getElementById('syncTag');
   const syncText = document.getElementById('syncText');
   function setSync(online, label) { syncTag.className = 'synctag' + (online ? '' : ' offline'); syncText.textContent = label; }
+
+  /* ---------- LICENSE / PROTECTION ---------- */
+  // သင့် domain ကို ဒီမှာ ထည့်ပါ (ဥပမာ ['myshop.web.app']) — အလွတ်ထားရင် မစစ်ပါ။ မတူတဲ့ domain မှာ ဖွင့်ရင် app မလုပ်တော့ပါ
+  const ALLOWED_HOSTS = ['yhkelectronics.github.io'];
+  if (ALLOWED_HOSTS.length && !ALLOWED_HOSTS.includes(location.hostname)) {
+    document.body.innerHTML = '<div style="padding:40px 20px;text-align:center;font-family:sans-serif;">ဒီ App ကို ဤနေရာမှာ သုံးခွင့်မရှိပါ။</div>';
+    throw new Error('Unauthorized host');
+  }
+  let license = null; // { active, expiresAt(Date), plan }
+  function licenseOk() {
+    if (!license || license.active === false || !license.expiresAt) return false;
+    return Date.now() < license.expiresAt.getTime();
+  }
+  function requireLicense() {
+    if (licenseOk()) return true;
+    alert('App သက်တမ်းကုန်နေပါပြီ (သို့) License မရှိပါ။ ဆက်သုံးရန် ဆက်သွယ်ပါ။ ကြည့်ရုံသာ ကြည့်လို့ရပါမယ်။');
+    return false;
+  }
+  function renderLicenseBanner() {
+    const el = document.getElementById('licenseBanner');
+    if (!currentUser) { el.style.display = 'none'; return; }
+    if (!licenseOk()) {
+      el.style.cssText = 'display:block;margin:0 0 12px;padding:10px 12px;border-radius:8px;font-size:0.85rem;line-height:1.5;background:#fdecea;color:#a12a22;border:1px solid #f3b8b3;';
+      el.textContent = '⛔ App သက်တမ်းကုန်နေပါပြီ (သို့) License မရှိပါ — ကြည့်ရုံသာ ကြည့်လို့ရပါမယ်။ အသစ်ထည့်/ပြင်ဖို့ ဆက်သွယ်ပါ။';
+      return;
+    }
+    const days = Math.ceil((license.expiresAt.getTime() - Date.now()) / 86400000);
+    if (days <= 7 && currentUser.role === 'owner') {
+      el.style.cssText = 'display:block;margin:0 0 12px;padding:10px 12px;border-radius:8px;font-size:0.85rem;line-height:1.5;background:#fff6dd;color:#7a5a00;border:1px solid #f0dc9a;';
+      el.textContent = '⚠️ App သက်တမ်း ' + days + ' ရက်အတွင်း ကုန်ပါမယ် (' + license.expiresAt.toLocaleDateString('en-GB') + ')';
+    } else el.style.display = 'none';
+  }
 
   /* ---------- GOOGLE SIGN-IN ---------- */
   const loginOverlay = document.getElementById('loginOverlay');
@@ -526,7 +561,7 @@
     document.getElementById('searchRow').style.display = 'flex';
     document.getElementById('menuName').textContent = currentUser.name || currentUser.email;
     document.getElementById('menuRole').textContent = titleOf(currentUser) + ' · ' + currentUser.email;
-    applyShopHeader(); updateEditorBar();
+    applyShopHeader(); updateEditorBar(); renderLicenseBanner();
     { const g = splitGraphemes((currentUser.name || currentUser.email || '?').trim())[0] || '?';
       document.getElementById('avatarLetter').textContent = g.toUpperCase();
       document.getElementById('menuBtn').style.background = currentUser.role === 'owner' ? 'var(--copper-dim)' : '#2f6b63'; }
@@ -559,6 +594,16 @@
           applyShopHeader();
         }
       }, (err) => console.warn('settings read error', err.message));
+    }
+    if (!licenseListenerStarted) {
+      licenseListenerStarted = true;
+      db.collection('settings').doc('license').onSnapshot((doc) => {
+        if (doc.exists) {
+          const d = doc.data(); const x = d.expiresAt;
+          license = { active: d.active !== false, plan: d.plan || '', expiresAt: x ? (x.toDate ? x.toDate() : new Date(x)) : null };
+        } else license = null;
+        renderLicenseBanner();
+      }, () => { license = null; renderLicenseBanner(); });
     }
     if (!usersListenerStarted && currentUser && currentUser.role === 'owner') {
       db.collection('staffRequests').onSnapshot((snap) => {
@@ -677,6 +722,7 @@
   });
 
   document.getElementById('addStaffBtn').addEventListener('click', async () => {
+    if (!requireLicense()) return;
     const email = document.getElementById('newStaffEmail').value.trim().toLowerCase();
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       alert('Gmail လိပ်စာ မှန်မှန်ကန်ကန် ရေးပေးပါ');
@@ -761,6 +807,7 @@
   }
 
   saveBtn.addEventListener('click', async () => {
+    if (!requireLicense()) return;
     const device = document.getElementById('fDevice').value.trim();
     const customer = document.getElementById('fCustomer').value.trim();
     if (!device || !customer) { alert('customer အမည်နှင့် စက်ပစ္စည်းအမည် ဖြည့်ပေးပါ'); return; }
@@ -936,6 +983,7 @@
       const id = e.target.dataset.id;
       const dev = devices.find(x => x.id === id);
       const newStatus = e.target.value;
+      if (!requireLicense()) { render(); return; }
       if (dev && dev.status !== newStatus) {
         const now = new Date().toISOString();
         const logEntry = { from: dev.status, to: newStatus, by: currentUser.name || currentUser.email, byRole: titleOf(currentUser), at: now };
@@ -959,6 +1007,7 @@
       document.getElementById('hist-' + e.target.dataset.id).classList.toggle('open');
     }
     if (e.target.classList.contains('takebtn')) {
+      if (!requireLicense()) return;
       const btn = e.target; const id = btn.dataset.id;
       btn.disabled = true;
       const myName = currentUser.name || currentUser.email;
