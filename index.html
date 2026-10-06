@@ -152,6 +152,7 @@
   .staff-row .name { font-weight: 500; font-size: 0.88rem; }
   .staff-row .email { color: var(--muted); font-size: 0.76rem; display: block; }
   .staff-row .role-tag { font-size: 0.72rem; color: var(--muted); margin-left: 6px; }
+  .staff-row select, .reqcard select { background: var(--surface-2); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 5px 8px; font-size: 0.76rem; font-family: var(--font-body); }
   .staff-row button { background: none; border: 1px solid var(--line); color: var(--red); border-radius: 6px; padding: 5px 10px; font-size: 0.76rem; cursor: pointer; flex-shrink: 0; }
   .card-actions button.takebtn { background: var(--copper); border: 1px solid var(--copper); color: #fff; border-radius: 6px; padding: 6px 10px; font-size: 0.8rem; cursor: pointer; font-weight: 600; }
   .card-actions button.printbtn { background: none; border: 1px solid var(--line); color: var(--teal); border-radius: 6px; padding: 6px 10px; font-size: 0.8rem; cursor: pointer; }
@@ -267,6 +268,13 @@
       <div class="field full"><label>ဝန်ထမ်း Gmail လိပ်စာ</label><input id="newStaffEmail" type="email" placeholder="aungaung@gmail.com"></div>
       <div class="field full"><label>ဖုန်းနံပါတ် (မထည့်လည်းရ)</label><input id="newStaffPhone" type="tel" placeholder="09..."></div>
       <div class="field full"><label>ရာထူး</label><input id="newStaffPosition" type="text" list="positionList" placeholder="စက်ပြင်သမား"></div>
+      <div class="field full"><label>Role (အခွင့်အာဏာ)</label>
+        <select id="newStaffRole">
+          <option value="technician">စက်ပြင်</option>
+          <option value="staff">အခြား (သန့်ရှင်းရေး စသည်)</option>
+          <option value="accountant">စာရင်းကိုင် (ခန့်မှန်းခ / အပိုပစ္စည်းစရိတ်သာ ပြင်ခွင့်)</option>
+        </select>
+      </div>
     </div>
     <div class="actions">
       <button class="primary" id="addStaffBtn">ဝန်ထမ်းထည့်မည်</button>
@@ -372,9 +380,15 @@
   let shopInfo = { name: '', desc: '', phone: '', address: '' };
   try { const c = JSON.parse(localStorage.getItem('shopInfo') || 'null'); if (c) shopInfo = { ...shopInfo, ...c }; } catch (e) {}
 
-  const ROLE_LABEL = { owner: 'ပိုင်ရှင်', staff: 'ဝန်ထမ်း' };
+  const ROLE_LABEL = { owner: 'ပိုင်ရှင်', accountant: 'စာရင်းကိုင်', technician: 'စက်ပြင်', staff: 'အခြား ဝန်ထမ်း' };
+  const ROLE_OPTIONS = [['technician','စက်ပြင်'],['staff','အခြား (သန့်ရှင်းရေး စသည်)'],['accountant','စာရင်းကိုင်']];
+  const roleSelectHtml = (cls, cur, extra) => `<select class="${cls}" ${extra || ''}>${ROLE_OPTIONS.map(([k,v]) => `<option value="${k}" ${k===cur?'selected':''}>${v}</option>`).join('')}</select>`;
+  const isOwner = () => !!currentUser && currentUser.role === 'owner';
+  const isAccountant = () => !!currentUser && currentUser.role === 'accountant';
+  const canEditRecord = () => isOwner() || isAccountant();   // ပြင်မည် ခလုတ် မြင်ခွင့်
+  const canSeeMoney = () => isOwner() || isAccountant();     // အပိုပစ္စည်း/အမြတ် မြင်ခွင့်
   function roleOf(r) { return ROLE_LABEL[r] || r || ''; }
-  function titleOf(u) { return !u ? '' : (u.role === 'owner' ? 'ပိုင်ရှင်' : (u.position || 'ဝန်ထမ်း')); }
+  function titleOf(u) { return !u ? '' : (u.role === 'owner' ? 'ပိုင်ရှင်' : (u.role === 'accountant' ? 'စာရင်းကိုင်' : (u.position || ROLE_LABEL[u.role] || 'ဝန်ထမ်း'))); }
   function meLabel() { return currentUser ? (currentUser.name || currentUser.email) + ' (' + titleOf(currentUser) + ')' : '-'; }
   function applyShopHeader() {
     document.getElementById('hdrTitle').textContent = (shopInfo.name || 'ပစ္စည်းပြင်ဆင်မှု မှတ်တမ်း');
@@ -670,6 +684,7 @@
         <b>${escapeHtml(r.name)}</b> · ${escapeHtml(r.position)}
         <span class="sm">📞 ${escapeHtml(r.phone)}</span>
         <span class="sm">✉️ ${escapeHtml(r.email)}</span>
+        <div class="sm" style="margin-top:8px;">Role: ${roleSelectHtml('reqRole', /စက်ပြင်/.test(r.position || '') ? 'technician' : (/စာရင်း/.test(r.position || '') ? 'accountant' : 'staff'), 'data-id="' + escapeHtml(r.id) + '"')}</div>
         <div class="ra"><button class="ok" data-id="${escapeHtml(r.id)}" data-act="ok">✓ လက်ခံမည်</button><button class="no" data-id="${escapeHtml(r.id)}" data-act="no">လက်မခံ</button></div>
       </div>`).join('');
   }
@@ -678,7 +693,7 @@
     const r = requests.find(x => x.id === e.target.dataset.id); if (!r) return;
     try {
       if (act === 'ok') {
-        await db.collection('users').doc(r.email).set({ email: r.email, name: r.name, phone: r.phone || '', position: r.position || '', role: 'staff' });
+        await db.collection('users').doc(r.email).set({ email: r.email, name: r.name, phone: r.phone || '', position: r.position || '', role: (document.querySelector('.reqRole[data-id="' + r.id + '"]') || {}).value || 'staff' });
         await db.collection('staffRequests').doc(r.id).delete();
       } else if (confirm(r.name + ' ရဲ့ လျှောက်လွှာကို လက်မခံမှာ သေချာလား?')) {
         await db.collection('staffRequests').doc(r.id).update({ status: 'rejected' });
@@ -693,6 +708,7 @@
         <div><span class="name">${escapeHtml(u.name || u.email)}</span><span class="role-tag">${escapeHtml(titleOf(u))}</span><span class="email">${escapeHtml(u.email)}${u.phone ? ' · ' + escapeHtml(u.phone) : ''}</span></div>
         <div style="display:flex;gap:6px;">
           <button data-id="${u.id}" class="rnStaff" style="color:var(--muted);">ပြင်</button>
+          ${u.role !== 'owner' ? roleSelectHtml('roleSel', u.role === 'accountant' || u.role === 'technician' ? u.role : 'staff', 'data-id="' + escapeHtml(u.id) + '"') : ''}
           ${u.role !== 'owner' ? `<button data-id="${u.id}" class="rmStaff">ဖျက်မည်</button>` : ''}
         </div>
       </div>
@@ -706,7 +722,7 @@
       const n = prompt('ဝန်ထမ်းနာမည်', (u && u.name) || '');
       if (n === null || !n.trim()) return;
       const upd = { name: n.trim() };
-      if (u && u.role !== 'owner') {
+      if (u && u.role !== 'owner' && u.role !== 'accountant') {
         const p = prompt('ရာထူး', u.position || '');
         if (p !== null) upd.position = p.trim();
       }
@@ -721,6 +737,17 @@
     }
   });
 
+  document.getElementById('staffList').addEventListener('change', async (e) => {
+    if (!e.target.classList.contains('roleSel')) return;
+    const id = e.target.dataset.id;
+    const u = users.find(x => x.id === id);
+    if (!u || u.role === 'owner') return;
+    const nr = e.target.value;
+    if (!confirm((u.name || u.email) + ' ကို "' + ROLE_LABEL[nr] + '" Role သို့ ပြောင်းမလား?')) { e.target.value = u.role === 'accountant' || u.role === 'technician' ? u.role : 'staff'; return; }
+    try { await db.collection('users').doc(id).update({ role: nr }); }
+    catch (err) { alert('ပြင်လို့မရပါ: ' + err.message); }
+  });
+
   document.getElementById('addStaffBtn').addEventListener('click', async () => {
     if (!requireLicense()) return;
     const email = document.getElementById('newStaffEmail').value.trim().toLowerCase();
@@ -728,11 +755,12 @@
       alert('Gmail လိပ်စာ မှန်မှန်ကန်ကန် ရေးပေးပါ');
       return;
     }
-    await db.collection('users').doc(email).set({ email, name: document.getElementById('newStaffName').value.trim(), phone: document.getElementById('newStaffPhone').value.trim(), position: document.getElementById('newStaffPosition').value.trim(), role: 'staff' });
+    await db.collection('users').doc(email).set({ email, name: document.getElementById('newStaffName').value.trim(), phone: document.getElementById('newStaffPhone').value.trim(), position: document.getElementById('newStaffPosition').value.trim(), role: document.getElementById('newStaffRole').value });
     document.getElementById('newStaffEmail').value = '';
     document.getElementById('newStaffName').value = '';
     document.getElementById('newStaffPhone').value = '';
     document.getElementById('newStaffPosition').value = '';
+    document.getElementById('newStaffRole').value = 'technician';
   });
 
   /* ---------- DEVICE FORM ---------- */
@@ -752,16 +780,23 @@
 
   function exitEdit() {
     editingId = null;
-    document.getElementById('fTechnician').disabled = false;
+    setFieldsLocked(false);
     document.getElementById('formTitle').textContent = 'ပစ္စည်းအသစ် လက်ခံခြင်း';
     saveBtn.textContent = 'သိမ်းမည်';
     updateEditorBar();
     document.getElementById('fParts').closest('.field').style.display = '';
   }
 
+  // စာရင်းကိုင်အတွက် — ခန့်မှန်းပြင်ဆင်ခ၊ အပိုပစ္စည်းကုန်ကျစရိတ် မှလွဲ၍ ကျန်တာ ပိတ်ထားမည်
+  const LOCKABLE = ['fVoucher','fCustomer','fPhone','fDevice','fDate','fReceivedBy','fTechnician','fIssue'];
+  function setFieldsLocked(lock) {
+    LOCKABLE.forEach(id => { document.getElementById(id).disabled = lock; });
+  }
+
   function openEdit(id) {
     const d = devices.find(x => x.id === id);
     if (!d) return;
+    if (!canEditRecord()) { alert('ပြင်ခွင့်မရှိပါ'); return; }
     editingId = id;
     document.getElementById('fVoucher').value = d.voucher || '';
     document.getElementById('fCustomer').value = d.customer || '';
@@ -770,12 +805,13 @@
     document.getElementById('fDate').value = d.date || '';
     document.getElementById('fReceivedBy').value = d.receivedBy || '';
     document.getElementById('fTechnician').value = d.technician || '';
-    document.getElementById('fTechnician').disabled = !!d.technician && currentUser.role !== 'owner';
+    setFieldsLocked(false);
+    if (isAccountant()) setFieldsLocked(true);
     document.getElementById('fIssue').value = d.issue || '';
     document.getElementById('fQuote').value = d.quote || '';
     document.getElementById('fParts').value = d.parts || '';
-    document.getElementById('fParts').closest('.field').style.display = currentUser.role === 'owner' ? '' : 'none';
-    document.getElementById('formTitle').textContent = 'ပစ္စည်းအချက်အလက် ပြင်ဆင်ခြင်း — ' + (d.voucher || '');
+    document.getElementById('fParts').closest('.field').style.display = canSeeMoney() ? '' : 'none';
+    document.getElementById('formTitle').textContent = 'ပစ္စည်းအချက်အလက် ပြင်ဆင်ခြင်း — ' + (d.voucher || '') + (isAccountant() ? ' (ခန့်မှန်းခ / အပိုပစ္စည်းစရိတ်သာ ပြင်ခွင့်)' : '');
     saveBtn.textContent = 'ပြင်ပြီးသိမ်းမည်';
     updateEditorBar();
     formPanel.classList.add('open');
@@ -814,7 +850,11 @@
     if (editingId) {
       const old = devices.find(x => x.id === editingId);
       if (!old) { exitEdit(); return; }
-      const nv = {
+      if (!canEditRecord()) { alert('ပြင်ခွင့်မရှိပါ'); exitEdit(); return; }
+      const nv = isAccountant() ? {
+        quote: Number(document.getElementById('fQuote').value) || 0,
+        parts: Number(document.getElementById('fParts').value) || 0
+      } : {
         voucher: document.getElementById('fVoucher').value.trim(),
         customer,
         phone: document.getElementById('fPhone').value.trim(),
@@ -825,8 +865,7 @@
         date: document.getElementById('fDate').value,
         quote: Number(document.getElementById('fQuote').value) || 0
       };
-      if (old.technician && currentUser.role !== 'owner') nv.technician = old.technician;
-      if (currentUser.role === 'owner') nv.parts = Number(document.getElementById('fParts').value) || 0;
+      if (isOwner()) nv.parts = Number(document.getElementById('fParts').value) || 0;
       const changes = [];
       for (const k in nv) {
         const a = (k === 'quote' || k === 'parts') ? (old[k] || 0) : (old[k] == null ? '' : old[k]);
@@ -893,7 +932,7 @@
     const t = `<span style="opacity:.7">(${fmtTime(l.at)})</span>`;
     if (l.type === 'edit') {
       const txt = (l.changes || []).map(c => {
-        if (c.key === 'parts' && currentUser.role !== 'owner') return escapeHtml(c.f) + ' ပြင်ထားသည်';
+        if (c.key === 'parts' && !canSeeMoney()) return escapeHtml(c.f) + ' ပြင်ထားသည်';
         return `${escapeHtml(c.f)}: ${escapeHtml(String(c.from === '' || c.from == null ? '-' : c.from))} → ${escapeHtml(String(c.to === '' || c.to == null ? '-' : c.to))}`;
       }).join(' · ');
       return `<div class="row">${who} — ✏️ ${txt} ${t}</div>`;
@@ -951,7 +990,7 @@
             ${d.receivedBy ? `<span>လက်ခံသူ- <b>${escapeHtml(d.receivedBy)}</b></span>` : ''}
             ${d.technician ? `<span>ပြင်မည့်သူ- <b>${escapeHtml(d.technician)}</b></span>` : ''}
           </div>
-          ${currentUser.role === 'owner' ? `
+          ${canSeeMoney() ? `
           <div class="card-meta">
             <span>ပြင်ဆင်ခ- <b>${fmt(d.quote)}</b></span>
             <span>အပိုပစ္စည်း- <b>${fmt(d.parts)}</b></span>
@@ -963,8 +1002,8 @@
               ${Object.entries(STATUS_LABEL).map(([k,v]) => `<option value="${k}" ${k===d.status?'selected':''}>${v}</option>`).join('')}
             </select>
             ${d.log && d.log.length > 0 ? `<button class="histbtn" data-id="${d.id}">မှတ်တမ်း (${d.log.length})</button>` : ''}
-            ${(!d.technician && d.status !== 'done' && d.status !== 'unrepairable') ? `<button class="takebtn" data-id="${d.id}">🔧 ပြုပြင်မည်</button>` : ''}
-            <button class="editbtn" data-id="${d.id}">✏️ ပြင်မည်</button>
+            ${((isOwner() || (currentUser && currentUser.role === 'technician')) && !d.technician && d.status !== 'done' && d.status !== 'unrepairable') ? `<button class="takebtn" data-id="${d.id}">🔧 ပြုပြင်မည်</button>` : ''}
+            ${canEditRecord() ? `<button class="editbtn" data-id="${d.id}">✏️ ပြင်မည်</button>` : ''}
             <button class="printbtn" data-id="${d.id}">🖨 ဘောင်ချာ</button>
             ${currentUser.role === 'owner' ? `<button class="del" data-id="${d.id}">ဖျက်မည်</button>` : ''}
           </div>
@@ -1007,6 +1046,7 @@
       document.getElementById('hist-' + e.target.dataset.id).classList.toggle('open');
     }
     if (e.target.classList.contains('takebtn')) {
+      if (!(isOwner() || (currentUser && currentUser.role === 'technician'))) return;
       if (!requireLicense()) return;
       const btn = e.target; const id = btn.dataset.id;
       btn.disabled = true;
