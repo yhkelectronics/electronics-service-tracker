@@ -147,7 +147,9 @@
   .google-btn:disabled { opacity: 0.6; cursor: default; }
   .login-err { color: var(--red); font-size: 0.82rem; margin-top: 14px; }
   .login-hint { margin-top: 16px; font-size: 0.74rem; color: var(--muted); }
-  .staff-row { display: flex; justify-content: space-between; align-items: center; padding: 9px 0; border-bottom: 1px solid var(--line); gap: 8px; }
+  .staff-row { display: flex; justify-content: space-between; align-items: center; padding: 9px 0; border-bottom: 1px solid var(--line); gap: 8px; flex-wrap: wrap; }
+  .staff-row > div:first-child { flex: 1 1 180px; min-width: 0; word-break: break-all; }
+  .staff-row > div:last-child { flex-wrap: wrap; }
   .staff-row:last-child { border-bottom: none; }
   .staff-row .name { font-weight: 500; font-size: 0.88rem; }
   .staff-row .email { color: var(--muted); font-size: 0.76rem; display: block; }
@@ -504,17 +506,42 @@
   document.getElementById('pendingLogoutBtn').addEventListener('click', () => auth.signOut());
   document.getElementById('pendingReloadBtn').addEventListener('click', () => location.reload());
 
+  const UA = navigator.userAgent || '';
+  const IS_MOBILE = /Android|iPhone|iPad|iPod|Mobile/i.test(UA);
+  const IN_APP_BROWSER = /FBAN|FBAV|FB_IAB|Messenger|Viber|Instagram|Line\/|Zalo|TikTok|MicroMessenger/i.test(UA);
+  const resetGoogleBtn = () => { googleBtn.disabled = false; googleBtnText.textContent = 'Google နဲ့ Sign in ဝင်မည်'; };
+
+  // Redirect နည်းနဲ့ ပြန်လာရင် error ရှိမရှိ စစ်
+  auth.getRedirectResult().catch((e) => {
+    if (e && e.code === 'auth/no-auth-event') return;
+    loginErr.textContent = 'Sign in မအောင်မြင်ပါ: ' + (e && e.message ? e.message : e);
+    resetGoogleBtn();
+  });
+
   googleBtn.addEventListener('click', async () => {
     loginErr.textContent = '';
+    if (IN_APP_BROWSER) {
+      loginErr.textContent = 'Facebook / Messenger / Viber ထဲက browser မှာ Google Sign in မရပါ။ ⋮ (သို့) Share ကိုနှိပ်ပြီး "Chrome နဲ့ဖွင့်မည်" ကို ရွေးပါ။';
+      return;
+    }
     googleBtn.disabled = true;
     googleBtnText.textContent = 'ဖွင့်နေသည်...';
+    const provider = new firebase.auth.GoogleAuthProvider();
+    provider.setCustomParameters({ prompt: 'select_account' });
     try {
-      const provider = new firebase.auth.GoogleAuthProvider();
+      if (IS_MOBILE) {
+        // ဖုန်းမှာ popup မကြာခဏ ပိတ်သွား/ပျက်လို့ redirect နည်းကို တိုက်ရိုက်သုံး
+        await auth.signInWithRedirect(provider);
+        return;
+      }
       await auth.signInWithPopup(provider);
     } catch (e) {
+      const fallback = ['auth/popup-closed-by-user','auth/popup-blocked','auth/cancelled-popup-request','auth/operation-not-supported-in-this-environment'];
+      if (!IS_MOBILE && fallback.includes(e.code)) {
+        try { await auth.signInWithRedirect(provider); return; } catch (e2) { e = e2; }
+      }
       loginErr.textContent = 'Sign in မအောင်မြင်ပါ: ' + e.message;
-      googleBtn.disabled = false;
-      googleBtnText.textContent = 'Google နဲ့ Sign in ဝင်မည်';
+      resetGoogleBtn();
     }
   });
 
