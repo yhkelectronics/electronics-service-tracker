@@ -115,31 +115,22 @@
   .staff-row button { background: none; border: 1px solid var(--line); color: var(--red); border-radius: 6px; padding: 5px 10px; font-size: 0.76rem; cursor: pointer; flex-shrink: 0; }
   .card-actions button.printbtn { background: none; border: 1px solid var(--line); color: var(--teal); border-radius: 6px; padding: 6px 10px; font-size: 0.8rem; cursor: pointer; }
 
-  #receiptArea { display: none; }
-  @media print {
-    body * { visibility: hidden; }
-    #receiptArea, #receiptArea * { visibility: visible; }
-    #receiptArea {
-      display: block;
-      position: absolute; left: 0; top: 0;
-      width: 80mm;
-      padding: 3mm;
-      color: #000; background: #fff;
-      font-family: 'Noto Sans Myanmar', sans-serif;
-      font-size: 11px;
-      line-height: 1.5;
-    }
-    #receiptArea .r-shop { text-align: center; font-weight: 700; font-size: 14px; margin-bottom: 1mm; }
-    #receiptArea .r-sub { text-align: center; font-size: 10px; margin-bottom: 2mm; }
-    #receiptArea hr { border: none; border-top: 1px dashed #000; margin: 2mm 0; }
-    #receiptArea .r-row { display: flex; justify-content: space-between; gap: 6px; margin: 1mm 0; }
-    #receiptArea .r-row .k { color: #333; }
-    #receiptArea .r-row .v { font-weight: 600; text-align: right; }
-    #receiptArea .r-issue { margin: 1.5mm 0; }
-    #receiptArea .r-total { display: flex; justify-content: space-between; font-size: 13px; font-weight: 700; margin-top: 2mm; }
-    #receiptArea .r-foot { text-align: center; font-size: 9.5px; margin-top: 3mm; color: #333; }
-    @page { size: 80mm auto; margin: 0; }
-  }
+  /* Receipt preview modal */
+  .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.75); display: none; align-items: center; justify-content: center; padding: 16px; z-index: 60; }
+  .modal.open { display: flex; }
+  .modal-box { width: 100%; max-width: 360px; max-height: 100%; display: flex; flex-direction: column; gap: 12px; }
+  .paper { background: #fff; color: #000; border-radius: 6px; padding: 14px 14px; overflow-y: auto; font-size: 13px; line-height: 1.6; box-shadow: 0 6px 24px rgba(0,0,0,.5); }
+  .paper .r-shop { text-align: center; font-weight: 700; font-size: 16px; margin-bottom: 2px; }
+  .paper .r-sub { text-align: center; font-size: 11px; margin-bottom: 6px; color: #333; }
+  .paper hr { border: none; border-top: 1px dashed #000; margin: 8px 0; }
+  .paper .r-row { display: flex; justify-content: space-between; gap: 8px; margin: 3px 0; }
+  .paper .r-row .k { color: #333; }
+  .paper .r-row .v { font-weight: 600; text-align: right; }
+  .paper .r-issue { margin: 4px 0; }
+  .paper .r-total { display: flex; justify-content: space-between; font-size: 15px; font-weight: 700; margin-top: 4px; }
+  .paper .r-foot { text-align: center; font-size: 11px; margin-top: 6px; color: #333; }
+  .modal-actions { display: flex; gap: 10px; }
+  .modal-actions button { flex: 1; }
 </style>
 </head>
 <body>
@@ -225,20 +216,28 @@
   <div class="list" id="list"></div>
 </main>
 
-<div id="receiptArea">
-  <div class="r-shop">⚡ Electronics Service</div>
-  <div class="r-sub" id="rDate"></div>
-  <hr>
-  <div class="r-row"><span class="k">ဘောင်ချာနံပါတ်</span><span class="v" id="rVoucher"></span></div>
-  <div class="r-row"><span class="k">Customer</span><span class="v" id="rCustomer"></span></div>
-  <div class="r-row"><span class="k">ဖုန်း</span><span class="v" id="rPhone"></span></div>
-  <div class="r-row"><span class="k">စက်ပစ္စည်း</span><span class="v" id="rDevice"></span></div>
-  <hr>
-  <div class="r-issue"><b>ချို့ယွင်းချက်:</b><br><span id="rIssue"></span></div>
-  <hr>
-  <div class="r-total"><span>ခန့်မှန်းကျသင့်ငွေ</span><span id="rQuote"></span></div>
-  <hr>
-  <div class="r-foot">ပစ္စည်းယူချိန် ဒီဘောင်ချာကို ယူဆောင်လာပေးပါ</div>
+<div class="modal" id="receiptModal">
+  <div class="modal-box">
+    <div class="paper" id="receiptArea">
+      <div class="r-shop">⚡ Electronics Service</div>
+      <div class="r-sub" id="rDate"></div>
+      <hr>
+      <div class="r-row"><span class="k">ဘောင်ချာနံပါတ်</span><span class="v" id="rVoucher"></span></div>
+      <div class="r-row"><span class="k">Customer</span><span class="v" id="rCustomer"></span></div>
+      <div class="r-row"><span class="k">ဖုန်း</span><span class="v" id="rPhone"></span></div>
+      <div class="r-row"><span class="k">စက်ပစ္စည်း</span><span class="v" id="rDevice"></span></div>
+      <hr>
+      <div class="r-issue"><b>ချို့ယွင်းချက်:</b><br><span id="rIssue"></span></div>
+      <hr>
+      <div class="r-total"><span>ခန့်မှန်းကျသင့်ငွေ</span><span id="rQuote"></span></div>
+      <hr>
+      <div class="r-foot">ပစ္စည်းယူချိန် ဒီဘောင်ချာကို ယူဆောင်လာပေးပါ</div>
+    </div>
+    <div class="modal-actions">
+      <button class="primary" id="receiptPrintBtn">🖨 Print</button>
+      <button class="ghost" id="receiptCloseBtn">ပိတ်မည်</button>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -518,7 +517,6 @@
             </select>
             ${d.log && d.log.length > 1 ? `<button class="histbtn" data-id="${d.id}">မှတ်တမ်း (${d.log.length})</button>` : ''}
             <button class="printbtn" data-id="${d.id}">🖨 ဘောင်ချာ</button>
-            <button class="printbtn rawbtbtn" data-id="${d.id}">📲 RawBT</button>
             ${currentUser.role === 'owner' ? `<button class="del" data-id="${d.id}">ဖျက်မည်</button>` : ''}
           </div>
           <div class="history" id="hist-${d.id}">
@@ -553,59 +551,135 @@
     if (e.target.classList.contains('histbtn')) {
       document.getElementById('hist-' + e.target.dataset.id).classList.toggle('open');
     }
-    if (e.target.classList.contains('rawbtbtn')) {
-      printViaRawBT(e.target.dataset.id);
-    } else if (e.target.classList.contains('printbtn')) {
-      printReceipt(e.target.dataset.id);
+    if (e.target.classList.contains('printbtn')) {
+      showReceipt(e.target.dataset.id);
     }
   });
 
-  function buildEscPosReceipt(d) {
-    const ESC = '\x1B', GS = '\x1D';
-    let s = '';
-    s += ESC + '@';            // initialize
-    s += ESC + 'a' + '\x01';   // center align
-    s += 'Electronics Service\n';
-    s += (fmtTime(d.createdAt || d.date)) + '\n';
-    s += '--------------------------------\n';
-    s += ESC + 'a' + '\x00';   // left align
-    s += 'Voucher: ' + (d.voucher || '-') + '\n';
-    s += 'Customer: ' + (d.customer || '-') + '\n';
-    s += 'Phone: ' + (d.phone || '-') + '\n';
-    s += 'Device: ' + (d.device || '-') + '\n';
-    s += '--------------------------------\n';
-    s += 'Issue: ' + (d.issue || '-') + '\n';
-    s += '--------------------------------\n';
-    s += ESC + 'E' + '\x01'; // bold on
-    s += 'Est. Price: ' + fmt(d.quote) + '\n';
-    s += ESC + 'E' + '\x00'; // bold off
-    s += '--------------------------------\n';
-    s += '\n\n\n';
-    s += GS + 'V' + '\x00'; // full cut
-    return s;
-  }
+  // ---- မြန်မာစာ ပါတဲ့ ဘောင်ချာကို ပုံအဖြစ် render လုပ်ပြီး ESC/POS raster နဲ့ ပို့ ----
+  const PRINT_WIDTH = 576; // 80mm = 576, 58mm = 384 (8 နဲ့ စား ပြတ်ရမယ်)
 
-  async function printViaRawBT(id) {
-    const d = devices.find(x => x.id === id);
-    if (!d) return;
-    const text = buildEscPosReceipt(d);
-    if (navigator.share) {
-      try {
-        await navigator.share({ text });
-      } catch (e) { /* user cancelled share sheet, ignore */ }
-    } else {
-      try {
-        await navigator.clipboard.writeText(text);
-        alert('ဒီ browser မှာ Share တိုက်ရိုက် မရပါ — ဘောင်ချာ text ကို clipboard ထဲ ကူးပေးထားပါပြီ။ RawBT app ကို ဖွင့်ပြီး paste ကူးပါ။');
-      } catch (e) {
-        alert('Share/Copy မအောင်မြင်ပါ: ' + e.message);
-      }
+  function splitGraphemes(t) {
+    if (window.Intl && Intl.Segmenter) {
+      return Array.from(new Intl.Segmenter(undefined, { granularity: 'grapheme' }).segment(t), x => x.segment);
     }
+    return Array.from(t);
   }
 
-  function printReceipt(id) {
+  function wrapText(ctx, text, maxW) {
+    const out = [];
+    String(text).split('\n').forEach(par => {
+      let line = '';
+      splitGraphemes(par).forEach(g => {
+        if (ctx.measureText(line + g).width > maxW && line) { out.push(line); line = g.trim() === '' ? '' : g; }
+        else line += g;
+      });
+      out.push(line);
+    });
+    return out;
+  }
+
+  async function renderReceiptCanvas(d) {
+    const FONT = "'Noto Sans Myanmar', 'Space Grotesk', sans-serif";
+    try {
+      await document.fonts.load("500 24px 'Noto Sans Myanmar'");
+      await document.fonts.load("700 24px 'Noto Sans Myanmar'");
+    } catch (e) {}
+    const W = PRINT_WIDTH, PAD = 8, FS = 24, LH = 38;
+    const canvas = document.createElement('canvas');
+    canvas.width = W; canvas.height = 3000;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, canvas.height);
+    ctx.fillStyle = '#000'; ctx.textBaseline = 'top';
+    let y = 6;
+    const setFont = (w, size) => { ctx.font = `${w} ${size || FS}px ${FONT}`; };
+    const center = (t, w, size) => { setFont(w, size); ctx.textAlign = 'center'; ctx.fillText(t, W / 2, y); y += (size || FS) + 14; };
+    const hr = () => { ctx.setLineDash([6, 4]); ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(PAD, y + 6); ctx.lineTo(W - PAD, y + 6); ctx.stroke(); ctx.setLineDash([]); y += 16; };
+    const row = (k, v, bold, size) => {
+      const sz = size || FS;
+      setFont(400, sz); ctx.textAlign = 'left';
+      const kw = ctx.measureText(k).width;
+      setFont(bold ? 700 : 500, sz);
+      const vw = ctx.measureText(v).width;
+      if (kw + vw + 16 <= W - PAD * 2) {
+        setFont(400, sz); ctx.textAlign = 'left'; ctx.fillText(k, PAD, y);
+        setFont(bold ? 700 : 500, sz); ctx.textAlign = 'right'; ctx.fillText(v, W - PAD, y);
+        y += LH;
+      } else {
+        setFont(400, sz); ctx.textAlign = 'left'; ctx.fillText(k, PAD, y); y += LH;
+        setFont(bold ? 700 : 500, sz);
+        wrapText(ctx, v, W - PAD * 2).forEach(l => { ctx.textAlign = 'right'; ctx.fillText(l, W - PAD, y); y += LH; });
+      }
+    };
+
+    center('⚡ Electronics Service', 700, 30);
+    center(fmtTime(d.createdAt || d.date), 400, 20);
+    hr();
+    row('ဘောင်ချာနံပါတ်', d.voucher || '-');
+    row('Customer', d.customer || '-');
+    row('ဖုန်း', d.phone || '-');
+    row('စက်ပစ္စည်း', d.device || '-');
+    hr();
+    setFont(700); ctx.textAlign = 'left'; ctx.fillText('ချို့ယွင်းချက်:', PAD, y); y += LH;
+    setFont(500);
+    wrapText(ctx, d.issue || '-', W - PAD * 2).forEach(l => { ctx.fillText(l, PAD, y); y += LH; });
+    hr();
+    row('ခန့်မှန်းကျသင့်ငွေ', String(fmt(d.quote)), true, 28);
+    hr();
+    setFont(400, 20); ctx.textAlign = 'center';
+    wrapText(ctx, 'ပစ္စည်းယူချိန် ဒီဘောင်ချာကို ယူဆောင်လာပေးပါ', W - PAD * 2).forEach(l => { ctx.fillText(l, W / 2, y); y += 30; });
+    y += 10;
+
+    // ဖြတ်ယူ (အမြင့်ကို 8 နဲ့ စားပြတ်အောင်)
+    const H = Math.ceil(y / 8) * 8;
+    const out = document.createElement('canvas');
+    out.width = W; out.height = H;
+    const octx = out.getContext('2d');
+    octx.fillStyle = '#fff'; octx.fillRect(0, 0, W, H);
+    octx.drawImage(canvas, 0, 0);
+    return out;
+  }
+
+  function canvasToEscPos(cv) {
+    const W = cv.width, H = cv.height, wb = W / 8;
+    const px = cv.getContext('2d').getImageData(0, 0, W, H).data;
+    const parts = [];
+    parts.push(Uint8Array.from([0x1B, 0x40])); // init
+    const BAND = 200; // rows per raster command
+    for (let y0 = 0; y0 < H; y0 += BAND) {
+      const h = Math.min(BAND, H - y0);
+      const data = new Uint8Array(wb * h);
+      for (let y = 0; y < h; y++) {
+        for (let x = 0; x < W; x++) {
+          const i = ((y0 + y) * W + x) * 4;
+          const lum = 0.299 * px[i] + 0.587 * px[i + 1] + 0.114 * px[i + 2];
+          if (lum < 140) data[y * wb + (x >> 3)] |= (0x80 >> (x & 7));
+        }
+      }
+      parts.push(Uint8Array.from([0x1D, 0x76, 0x30, 0x00, wb & 0xFF, wb >> 8, h & 0xFF, h >> 8]));
+      parts.push(data);
+    }
+    parts.push(Uint8Array.from([0x0A, 0x0A, 0x0A, 0x1D, 0x56, 0x00])); // feed + cut
+    const total = parts.reduce((n, p) => n + p.length, 0);
+    const all = new Uint8Array(total);
+    let o = 0; parts.forEach(p => { all.set(p, o); o += p.length; });
+    return all;
+  }
+
+  function bytesToBase64(bytes) {
+    let bin = '';
+    for (let i = 0; i < bytes.length; i += 0x8000) {
+      bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+    }
+    return btoa(bin);
+  }
+
+  let currentReceiptId = null;
+
+  function showReceipt(id) {
     const d = devices.find(x => x.id === id);
     if (!d) return;
+    currentReceiptId = id;
     document.getElementById('rDate').textContent = fmtTime(d.createdAt || d.date);
     document.getElementById('rVoucher').textContent = d.voucher || '-';
     document.getElementById('rCustomer').textContent = d.customer || '-';
@@ -613,8 +687,34 @@
     document.getElementById('rDevice').textContent = d.device || '-';
     document.getElementById('rIssue').textContent = d.issue || '-';
     document.getElementById('rQuote').textContent = fmt(d.quote);
-    window.print();
+    document.getElementById('receiptModal').classList.add('open');
   }
+
+  function closeReceipt() {
+    document.getElementById('receiptModal').classList.remove('open');
+    currentReceiptId = null;
+  }
+
+  // RawBT သို့ တိုက်ရိုက်ပို့ (rawbt:base64,... scheme)
+  async function printViaRawBT(id) {
+    const d = devices.find(x => x.id === id);
+    if (!d) return;
+    try {
+      const cv = await renderReceiptCanvas(d);
+      const bytes = canvasToEscPos(cv);
+      window.location.href = 'rawbt:base64,' + bytesToBase64(bytes);
+    } catch (err) {
+      alert('Print မအောင်မြင်ပါ: ' + err.message);
+    }
+  }
+
+  document.getElementById('receiptPrintBtn').addEventListener('click', () => {
+    if (currentReceiptId) printViaRawBT(currentReceiptId);
+  });
+  document.getElementById('receiptCloseBtn').addEventListener('click', closeReceipt);
+  document.getElementById('receiptModal').addEventListener('click', (e) => {
+    if (e.target.id === 'receiptModal') closeReceipt();
+  });
 
   function renderStats() {
     const total = devices.length;
