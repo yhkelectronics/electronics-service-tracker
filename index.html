@@ -113,6 +113,33 @@
   .staff-row .email { color: var(--muted); font-size: 0.76rem; display: block; }
   .staff-row .role-tag { font-size: 0.72rem; color: var(--muted); margin-left: 6px; }
   .staff-row button { background: none; border: 1px solid var(--line); color: var(--red); border-radius: 6px; padding: 5px 10px; font-size: 0.76rem; cursor: pointer; flex-shrink: 0; }
+  .card-actions button.printbtn { background: none; border: 1px solid var(--line); color: var(--teal); border-radius: 6px; padding: 6px 10px; font-size: 0.8rem; cursor: pointer; }
+
+  #receiptArea { display: none; }
+  @media print {
+    body * { visibility: hidden; }
+    #receiptArea, #receiptArea * { visibility: visible; }
+    #receiptArea {
+      display: block;
+      position: absolute; left: 0; top: 0;
+      width: 80mm;
+      padding: 3mm;
+      color: #000; background: #fff;
+      font-family: 'Noto Sans Myanmar', sans-serif;
+      font-size: 11px;
+      line-height: 1.5;
+    }
+    #receiptArea .r-shop { text-align: center; font-weight: 700; font-size: 14px; margin-bottom: 1mm; }
+    #receiptArea .r-sub { text-align: center; font-size: 10px; margin-bottom: 2mm; }
+    #receiptArea hr { border: none; border-top: 1px dashed #000; margin: 2mm 0; }
+    #receiptArea .r-row { display: flex; justify-content: space-between; gap: 6px; margin: 1mm 0; }
+    #receiptArea .r-row .k { color: #333; }
+    #receiptArea .r-row .v { font-weight: 600; text-align: right; }
+    #receiptArea .r-issue { margin: 1.5mm 0; }
+    #receiptArea .r-total { display: flex; justify-content: space-between; font-size: 13px; font-weight: 700; margin-top: 2mm; }
+    #receiptArea .r-foot { text-align: center; font-size: 9.5px; margin-top: 3mm; color: #333; }
+    @page { size: 80mm auto; margin: 0; }
+  }
 </style>
 </head>
 <body>
@@ -197,6 +224,22 @@
 
   <div class="list" id="list"></div>
 </main>
+
+<div id="receiptArea">
+  <div class="r-shop">⚡ Electronics Service</div>
+  <div class="r-sub" id="rDate"></div>
+  <hr>
+  <div class="r-row"><span class="k">ဘောင်ချာနံပါတ်</span><span class="v" id="rVoucher"></span></div>
+  <div class="r-row"><span class="k">Customer</span><span class="v" id="rCustomer"></span></div>
+  <div class="r-row"><span class="k">ဖုန်း</span><span class="v" id="rPhone"></span></div>
+  <div class="r-row"><span class="k">စက်ပစ္စည်း</span><span class="v" id="rDevice"></span></div>
+  <hr>
+  <div class="r-issue"><b>ချို့ယွင်းချက်:</b><br><span id="rIssue"></span></div>
+  <hr>
+  <div class="r-total"><span>ခန့်မှန်းကျသင့်ငွေ</span><span id="rQuote"></span></div>
+  <hr>
+  <div class="r-foot">ပစ္စည်းယူချိန် ဒီဘောင်ချာကို ယူဆောင်လာပေးပါ</div>
+</div>
 
 <script>
   const STATUS_LABEL = {
@@ -473,6 +516,7 @@
               ${Object.entries(STATUS_LABEL).map(([k,v]) => `<option value="${k}" ${k===d.status?'selected':''}>${v}</option>`).join('')}
             </select>
             ${d.log && d.log.length > 1 ? `<button class="histbtn" data-id="${d.id}">မှတ်တမ်း (${d.log.length})</button>` : ''}
+            <button class="printbtn" data-id="${d.id}">🖨 ဘောင်ချာ</button>
             ${currentUser.role === 'owner' ? `<button class="del" data-id="${d.id}">ဖျက်မည်</button>` : ''}
           </div>
           <div class="history" id="hist-${d.id}">
@@ -507,7 +551,23 @@
     if (e.target.classList.contains('histbtn')) {
       document.getElementById('hist-' + e.target.dataset.id).classList.toggle('open');
     }
+    if (e.target.classList.contains('printbtn')) {
+      printReceipt(e.target.dataset.id);
+    }
   });
+
+  function printReceipt(id) {
+    const d = devices.find(x => x.id === id);
+    if (!d) return;
+    document.getElementById('rDate').textContent = fmtTime(d.createdAt || d.date);
+    document.getElementById('rVoucher').textContent = d.voucher || '-';
+    document.getElementById('rCustomer').textContent = d.customer || '-';
+    document.getElementById('rPhone').textContent = d.phone || '-';
+    document.getElementById('rDevice').textContent = d.device || '-';
+    document.getElementById('rIssue').textContent = d.issue || '-';
+    document.getElementById('rQuote').textContent = fmt(d.quote);
+    window.print();
+  }
 
   function renderStats() {
     const total = devices.length;
