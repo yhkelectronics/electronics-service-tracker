@@ -75,6 +75,7 @@
   .card { background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--copper-dim); border-radius: 10px; padding: 14px 16px; }
   .card[data-status="received"] { border-left-color: var(--muted); }
   .card[data-status="repairing"] { border-left-color: var(--copper); }
+  .card[data-status="waiting_parts"] { border-left-color: #d4a017; }
   .card[data-status="ready"] { border-left-color: var(--teal); }
   .card[data-status="unrepairable"] { border-left-color: var(--red); }
   .card[data-status="done"] { border-left-color: var(--green); opacity: 0.85; }
@@ -94,6 +95,13 @@
   .card-actions select { background: var(--surface-2); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; font-size: 0.8rem; font-family: var(--font-body); }
   .card-actions button.del { background: none; border: 1px solid var(--line); color: var(--red); border-radius: 6px; padding: 6px 10px; font-size: 0.8rem; cursor: pointer; }
   .card-actions button.histbtn { background: none; border: 1px solid var(--line); color: var(--muted); border-radius: 6px; padding: 6px 10px; font-size: 0.8rem; cursor: pointer; }
+  .card-wait { margin-top: 8px; font-size: 0.84rem; color: #e0b93f; background: rgba(212,160,23,0.1); border: 1px solid rgba(212,160,23,0.35); border-radius: 7px; padding: 6px 10px; }
+  .card-actions button.editbtn { background: none; border: 1px solid var(--line); color: var(--copper); border-radius: 6px; padding: 6px 10px; font-size: 0.8rem; cursor: pointer; }
+  .age { font-size: 0.72rem; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); margin-left: 4px; }
+  .age.old { color: var(--red); border-color: var(--red); }
+  .searchrow { display: none; gap: 8px; margin-bottom: 14px; }
+  .searchrow input { flex: 1; min-width: 0; background: var(--surface); border: 1px solid var(--line); color: var(--text); border-radius: 8px; padding: 9px 12px; font-family: var(--font-body); font-size: 0.9rem; }
+  .searchrow select { background: var(--surface); border: 1px solid var(--line); color: var(--text); border-radius: 8px; padding: 9px 8px; font-family: var(--font-body); font-size: 0.82rem; }
   .history { margin-top: 10px; border-top: 1px dashed var(--line); padding-top: 8px; display: none; }
   .history.open { display: block; }
   .history .row { font-size: 0.78rem; color: var(--muted); padding: 3px 0; }
@@ -129,6 +137,7 @@
   .paper .r-issue { margin: 4px 0; }
   .paper .r-total { display: flex; justify-content: space-between; font-size: 15px; font-weight: 700; margin-top: 4px; }
   .paper .r-foot { text-align: center; font-size: 11px; margin-top: 6px; color: #333; }
+  .paper .r-addr { text-align: center; font-size: 12px; color: #222; }
   .modal-actions { display: flex; gap: 10px; }
   .modal-actions button { flex: 1; }
 </style>
@@ -155,7 +164,8 @@
     <div class="synctag offline" id="syncTag"><span class="dot"></span><span id="syncText">ချိတ်ဆက်နေသည်...</span></div>
   </div>
   <div class="whoami" id="whoamiBox" style="display:none;">
-    <span class="userchip"><span class="role-dot" id="roleDot"></span><span class="n" id="whoName"></span></span>
+    <span class="userchip" id="userChip" title="နာမည်ပြင်ရန် နှိပ်ပါ" style="cursor:pointer;"><span class="role-dot" id="roleDot"></span><span class="n" id="whoName"></span></span>
+    <button id="shopSettingsBtn" style="display:none;">ဆိုင်အချက်အလက်</button>
     <button id="manageStaffBtn" style="display:none;">ဝန်ထမ်းစီမံမည်</button>
     <button id="logoutBtn">ထွက်မည်</button>
   </div>
@@ -169,10 +179,24 @@
     <div class="stat profit"><div class="label">လက်ကျန်အမြတ်ငွေ</div><div class="value" id="statProfit">0</div></div>
   </div>
 
+  <div class="panel" id="shopPanel">
+    <h2>ဆိုင်အချက်အလက် (ဘောင်ချာပေါ်မှာ ပေါ်မယ်)</h2>
+    <div class="field-grid">
+      <div class="field full"><label>ဆိုင်အမည်</label><input id="shopName" type="text" placeholder="ဆိုင်နာမည်"></div>
+      <div class="field full"><label>ဖုန်းနံပါတ်</label><input id="shopPhone" type="text" placeholder="09..."></div>
+      <div class="field full"><label>လိပ်စာ</label><textarea id="shopAddress" placeholder="လိပ်စာ"></textarea></div>
+    </div>
+    <div class="actions">
+      <button class="primary" id="saveShopBtn">သိမ်းမည်</button>
+      <button class="ghost" id="closeShopBtn">ပိတ်မည်</button>
+    </div>
+  </div>
+
   <div class="panel" id="staffPanel">
     <h2>ဝန်ထမ်းစီမံမှု</h2>
     <div id="staffList"></div>
     <div class="field-grid" style="margin-top:14px;">
+      <div class="field full"><label>ဝန်ထမ်းနာမည် (မထည့်လည်းရ — မထည့်ရင် Google နာမည်သုံးမယ်)</label><input id="newStaffName" type="text" placeholder="အောင်အောင်"></div>
       <div class="field full"><label>ဝန်ထမ်း Gmail လိပ်စာ</label><input id="newStaffEmail" type="email" placeholder="aungaung@gmail.com"></div>
     </div>
     <div class="actions">
@@ -186,6 +210,7 @@
       <button class="tab active" data-filter="all">အားလုံး</button>
       <button class="tab" data-filter="received">လက်ခံရရှိ</button>
       <button class="tab" data-filter="repairing">ပြင်နေဆဲ</button>
+      <button class="tab" data-filter="waiting_parts">အပိုပစ္စည်းစောင့်</button>
       <button class="tab" data-filter="ready">ပြင်ပြီး-မယူသေး</button>
       <button class="tab" data-filter="unrepairable">မပြင်နိုင်</button>
       <button class="tab" data-filter="done">ပြီးစီး</button>
@@ -193,8 +218,13 @@
     <button class="primary" id="toggleForm">+ ပစ္စည်းအသစ် ထည့်မည်</button>
   </div>
 
+  <div class="searchrow" id="searchRow">
+    <input id="searchBox" type="search" placeholder="ဘောင်ချာ / customer / ဖုန်း / စက် ရှာရန်...">
+    <select id="sortSel"><option value="new">အသစ်ဆုံးအရင်</option><option value="old">အဟောင်းဆုံးအရင်</option></select>
+  </div>
+
   <div class="panel" id="formPanel">
-    <h2>ပစ္စည်းအသစ် လက်ခံခြင်း</h2>
+    <h2 id="formTitle">ပစ္စည်းအသစ် လက်ခံခြင်း</h2>
     <div class="field-grid">
       <div class="field"><label>ဘောင်ချာနံပါတ်</label><input id="fVoucher" type="text" placeholder="V-0001"></div>
       <div class="field"><label>customer အမည်</label><input id="fCustomer" type="text" placeholder="ဦးအောင်..."></div>
@@ -219,7 +249,9 @@
 <div class="modal" id="receiptModal">
   <div class="modal-box">
     <div class="paper" id="receiptArea">
-      <div class="r-shop">⚡ Electronics Service</div>
+      <div class="r-shop" id="rShop"></div>
+      <div class="r-addr" id="rAddr"></div>
+      <div class="r-addr" id="rShopPhone"></div>
       <div class="r-sub" id="rDate"></div>
       <hr>
       <div class="r-row"><span class="k">ဘောင်ချာနံပါတ်</span><span class="v" id="rVoucher"></span></div>
@@ -242,7 +274,7 @@
 
 <script>
   const STATUS_LABEL = {
-    received: 'လက်ခံရရှိ', repairing: 'ပြင်ဆင်နေဆဲ', ready: 'ပြင်ပြီး - မယူသေးပါ',
+    received: 'လက်ခံရရှိ', repairing: 'ပြင်ဆင်နေဆဲ', waiting_parts: 'အပိုပစ္စည်းစောင့်နေ', ready: 'ပြင်ပြီး - မယူသေးပါ',
     unrepairable: 'မပြင်နိုင်ပါ', done: 'ပြီးစီး (ယူသွားပြီး)'
   };
 
@@ -265,6 +297,9 @@
   let filter = 'all';
   let devicesListenerStarted = false;
   let usersListenerStarted = false;
+  let settingsListenerStarted = false;
+  let shopInfo = { name: '', phone: '', address: '' };
+  try { const c = JSON.parse(localStorage.getItem('shopInfo') || 'null'); if (c) shopInfo = { ...shopInfo, ...c }; } catch (e) {}
 
   function escapeHtml(str) { const d = document.createElement('div'); d.textContent = str == null ? '' : str; return d.innerHTML; }
   function fmt(n) { return Number(n || 0).toLocaleString('en-US') + ' Ks'; }
@@ -301,12 +336,24 @@
 
   document.getElementById('logoutBtn').addEventListener('click', () => auth.signOut());
 
+  document.getElementById('userChip').addEventListener('click', async () => {
+    if (!currentUser) return;
+    const n = prompt('သင့်နာမည် (မှတ်တမ်းမှာ ဒီနာမည်နဲ့ ပေါ်မယ်)', currentUser.name || '');
+    if (n === null || !n.trim()) return;
+    try {
+      await db.collection('users').doc(currentUser.email).update({ name: n.trim() });
+      currentUser.name = n.trim();
+      afterLogin();
+    } catch (err) { alert('ပြင်လို့မရပါ: ' + err.message); }
+  });
+
   auth.onAuthStateChanged(async (fbUser) => {
     if (!fbUser) {
       currentUser = null;
       document.getElementById('whoamiBox').style.display = 'none';
       document.getElementById('statsBar').style.display = 'none';
       document.getElementById('toolbarBox').style.display = 'none';
+      document.getElementById('searchRow').style.display = 'none';
       document.getElementById('list').innerHTML = '';
       loginOverlay.style.display = 'flex';
       googleBtn.disabled = false;
@@ -341,9 +388,11 @@
   function afterLogin() {
     document.getElementById('whoamiBox').style.display = 'flex';
     document.getElementById('toolbarBox').style.display = 'flex';
+    document.getElementById('searchRow').style.display = 'flex';
     document.getElementById('whoName').textContent = (currentUser.name || currentUser.email) + (currentUser.role === 'owner' ? ' · ပိုင်ရှင်' : ' · ဝန်ထမ်း');
     document.getElementById('roleDot').className = 'role-dot' + (currentUser.role === 'staff' ? ' staff' : '');
     document.getElementById('manageStaffBtn').style.display = currentUser.role === 'owner' ? 'inline-block' : 'none';
+    document.getElementById('shopSettingsBtn').style.display = currentUser.role === 'owner' ? 'inline-block' : 'none';
     document.getElementById('statsBar').style.display = currentUser.role === 'owner' ? 'grid' : 'none';
     if (!document.getElementById('fReceivedBy').value) {
       document.getElementById('fReceivedBy').value = currentUser.name || currentUser.email;
@@ -360,6 +409,15 @@
         if (currentUser) render();
       }, (err) => setSync(false, 'Firestore error: ' + err.message));
     }
+    if (!settingsListenerStarted) {
+      settingsListenerStarted = true;
+      db.collection('settings').doc('shop').onSnapshot((doc) => {
+        if (doc.exists) {
+          shopInfo = { ...shopInfo, ...doc.data() };
+          try { localStorage.setItem('shopInfo', JSON.stringify(shopInfo)); } catch (e) {}
+        }
+      }, (err) => console.warn('settings read error', err.message));
+    }
     if (!usersListenerStarted && currentUser && currentUser.role === 'owner') {
       usersListenerStarted = true;
       db.collection('users').onSnapshot((snap) => {
@@ -368,6 +426,32 @@
       });
     }
   }
+
+  /* ---------- SHOP INFO (owner only edit) ---------- */
+  const shopPanel = document.getElementById('shopPanel');
+  document.getElementById('shopSettingsBtn').addEventListener('click', () => {
+    document.getElementById('shopName').value = shopInfo.name || '';
+    document.getElementById('shopPhone').value = shopInfo.phone || '';
+    document.getElementById('shopAddress').value = shopInfo.address || '';
+    shopPanel.classList.add('open');
+    shopPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+  document.getElementById('closeShopBtn').addEventListener('click', () => shopPanel.classList.remove('open'));
+  document.getElementById('saveShopBtn').addEventListener('click', async () => {
+    const data = {
+      name: document.getElementById('shopName').value.trim(),
+      phone: document.getElementById('shopPhone').value.trim(),
+      address: document.getElementById('shopAddress').value.trim()
+    };
+    shopInfo = data;
+    try { localStorage.setItem('shopInfo', JSON.stringify(data)); } catch (e) {}
+    try {
+      await db.collection('settings').doc('shop').set(data);
+      shopPanel.classList.remove('open');
+    } catch (e) {
+      alert('Server ပေါ်မှာ သိမ်းလို့မရပါ (Firestore rules မှာ settings/shop ကို ခွင့်ပြုပေးဖို့ လိုပါတယ်)။ ဒီဖုန်းထဲမှာပဲ သိမ်းထားပါတယ်။\n' + e.message);
+    }
+  });
 
   /* ---------- STAFF ADMIN (owner only) ---------- */
   const staffPanel = document.getElementById('staffPanel');
@@ -381,12 +465,24 @@
     el.innerHTML = users.map(u => `
       <div class="staff-row">
         <div><span class="name">${escapeHtml(u.name || u.email)}</span><span class="role-tag">${u.role === 'owner' ? 'ပိုင်ရှင်' : 'ဝန်ထမ်း'}</span><span class="email">${escapeHtml(u.email)}</span></div>
-        ${u.role !== 'owner' ? `<button data-id="${u.id}" class="rmStaff">ဖျက်မည်</button>` : ''}
+        <div style="display:flex;gap:6px;">
+          <button data-id="${u.id}" class="rnStaff" style="color:var(--muted);">နာမည်ပြင်</button>
+          ${u.role !== 'owner' ? `<button data-id="${u.id}" class="rmStaff">ဖျက်မည်</button>` : ''}
+        </div>
       </div>
     `).join('');
   }
 
   document.getElementById('staffList').addEventListener('click', async (e) => {
+    if (e.target.classList.contains('rnStaff')) {
+      const id = e.target.dataset.id;
+      const u = users.find(x => x.id === id);
+      const n = prompt('ဝန်ထမ်းနာမည်', (u && u.name) || '');
+      if (n !== null && n.trim()) {
+        try { await db.collection('users').doc(id).update({ name: n.trim() }); }
+        catch (err) { alert('ပြင်လို့မရပါ: ' + err.message); }
+      }
+    }
     if (e.target.classList.contains('rmStaff')) {
       const id = e.target.dataset.id;
       if (confirm('ဒီဝန်ထမ်းကို ဖျက်မှာ သေချာလား?')) {
@@ -401,8 +497,9 @@
       alert('Gmail လိပ်စာ မှန်မှန်ကန်ကန် ရေးပေးပါ');
       return;
     }
-    await db.collection('users').doc(email).set({ email, name: '', role: 'staff' });
+    await db.collection('users').doc(email).set({ email, name: document.getElementById('newStaffName').value.trim(), role: 'staff' });
     document.getElementById('newStaffEmail').value = '';
+    document.getElementById('newStaffName').value = '';
   });
 
   /* ---------- DEVICE FORM ---------- */
@@ -417,14 +514,46 @@
 
   function nextVoucherNumber() { return 'V-' + String(devices.length + 1).padStart(4, '0'); }
 
+  let editingId = null;
+  const EDIT_LABELS = { voucher:'ဘောင်ချာနံပါတ်', customer:'Customer', phone:'ဖုန်း', device:'စက်ပစ္စည်း', receivedBy:'လက်ခံသူ', technician:'ပြင်မည့်သူ', issue:'ချို့ယွင်းချက်', date:'လက်ခံရက်စွဲ', quote:'ခန့်မှန်းပြင်ဆင်ခ', parts:'အပိုပစ္စည်းကုန်ကျစရိတ်' };
+
+  function exitEdit() {
+    editingId = null;
+    document.getElementById('formTitle').textContent = 'ပစ္စည်းအသစ် လက်ခံခြင်း';
+    saveBtn.textContent = 'သိမ်းမည်';
+    document.getElementById('fParts').closest('.field').style.display = '';
+  }
+
+  function openEdit(id) {
+    const d = devices.find(x => x.id === id);
+    if (!d) return;
+    editingId = id;
+    document.getElementById('fVoucher').value = d.voucher || '';
+    document.getElementById('fCustomer').value = d.customer || '';
+    document.getElementById('fPhone').value = d.phone || '';
+    document.getElementById('fDevice').value = d.device || '';
+    document.getElementById('fDate').value = d.date || '';
+    document.getElementById('fReceivedBy').value = d.receivedBy || '';
+    document.getElementById('fTechnician').value = d.technician || '';
+    document.getElementById('fIssue').value = d.issue || '';
+    document.getElementById('fQuote').value = d.quote || '';
+    document.getElementById('fParts').value = d.parts || '';
+    document.getElementById('fParts').closest('.field').style.display = currentUser.role === 'owner' ? '' : 'none';
+    document.getElementById('formTitle').textContent = 'ပစ္စည်းအချက်အလက် ပြင်ဆင်ခြင်း — ' + (d.voucher || '');
+    saveBtn.textContent = 'ပြင်ပြီးသိမ်းမည်';
+    formPanel.classList.add('open');
+    formPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
   toggleFormBtn.addEventListener('click', () => {
+    if (editingId) { exitEdit(); clearForm(); formPanel.classList.remove('open'); return; }
     formPanel.classList.toggle('open');
     if (formPanel.classList.contains('open')) {
       if (!document.getElementById('fVoucher').value) document.getElementById('fVoucher').value = nextVoucherNumber();
       if (!document.getElementById('fReceivedBy').value) document.getElementById('fReceivedBy').value = currentUser ? (currentUser.name || currentUser.email) : '';
     }
   });
-  cancelBtn.addEventListener('click', () => { formPanel.classList.remove('open'); clearForm(); });
+  cancelBtn.addEventListener('click', () => { exitEdit(); formPanel.classList.remove('open'); clearForm(); });
 
   function clearForm() {
     document.getElementById('fVoucher').value = '';
@@ -443,6 +572,36 @@
     const device = document.getElementById('fDevice').value.trim();
     const customer = document.getElementById('fCustomer').value.trim();
     if (!device || !customer) { alert('customer အမည်နှင့် စက်ပစ္စည်းအမည် ဖြည့်ပေးပါ'); return; }
+    if (editingId) {
+      const old = devices.find(x => x.id === editingId);
+      if (!old) { exitEdit(); return; }
+      const nv = {
+        voucher: document.getElementById('fVoucher').value.trim(),
+        customer,
+        phone: document.getElementById('fPhone').value.trim(),
+        device,
+        receivedBy: document.getElementById('fReceivedBy').value.trim(),
+        technician: document.getElementById('fTechnician').value.trim(),
+        issue: document.getElementById('fIssue').value.trim(),
+        date: document.getElementById('fDate').value,
+        quote: Number(document.getElementById('fQuote').value) || 0
+      };
+      if (currentUser.role === 'owner') nv.parts = Number(document.getElementById('fParts').value) || 0;
+      const changes = [];
+      for (const k in nv) {
+        const a = (k === 'quote' || k === 'parts') ? (old[k] || 0) : (old[k] == null ? '' : old[k]);
+        if (String(a) !== String(nv[k])) changes.push({ key: k, f: EDIT_LABELS[k], from: a, to: nv[k] });
+      }
+      if (!changes.length) { exitEdit(); clearForm(); formPanel.classList.remove('open'); return; }
+      saveBtn.disabled = true;
+      try {
+        const entry2 = { type: 'edit', by: currentUser.name || currentUser.email, at: new Date().toISOString(), changes };
+        await db.collection('devices').doc(editingId).update({ ...nv, log: firebase.firestore.FieldValue.arrayUnion(entry2) });
+        exitEdit(); clearForm(); formPanel.classList.remove('open');
+      } catch (e) { alert('ပြင်လို့ မအောင်မြင်ပါ: ' + e.message); }
+      saveBtn.disabled = false;
+      return;
+    }
     const now = new Date().toISOString();
     saveBtn.disabled = true;
     const entry = {
@@ -468,6 +627,9 @@
     saveBtn.disabled = false;
   });
 
+  document.getElementById('searchBox').addEventListener('input', render);
+  document.getElementById('sortSel').addEventListener('change', render);
+
   tabsEl.addEventListener('click', (e) => {
     const btn = e.target.closest('.tab');
     if (!btn) return;
@@ -477,9 +639,52 @@
   });
 
   /* ---------- LIST / CARDS ---------- */
+  function daysSince(iso) {
+    if (!iso) return null;
+    return Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 86400000));
+  }
+  function statusSince(d) {
+    const l = (d.log || []).slice().reverse().find(x => x.to);
+    return l ? l.at : (d.createdAt || null);
+  }
+  function dayLabel(n) { return n === null ? '' : (n === 0 ? 'ယနေ့' : n + ' ရက်'); }
+  function logRowHtml(l) {
+    const who = `<b>${escapeHtml(l.by)}</b>`;
+    const t = `<span style="opacity:.7">(${fmtTime(l.at)})</span>`;
+    if (l.type === 'edit') {
+      const txt = (l.changes || []).map(c => {
+        if (c.key === 'parts' && currentUser.role !== 'owner') return escapeHtml(c.f) + ' ပြင်ထားသည်';
+        return `${escapeHtml(c.f)}: ${escapeHtml(String(c.from === '' || c.from == null ? '-' : c.from))} → ${escapeHtml(String(c.to === '' || c.to == null ? '-' : c.to))}`;
+      }).join(' · ');
+      return `<div class="row">${who} — ✏️ ${txt} ${t}</div>`;
+    }
+    return `<div class="row">${who} — ${l.from ? STATUS_LABEL[l.from] + ' → ' : ''}${STATUS_LABEL[l.to]} ${t}</div>`;
+  }
+
+  function waitingText(d) {
+    const l = (d.log || []).slice().reverse().find(x => x.to === 'waiting_parts');
+    if (!l) return '';
+    const days = Math.floor((Date.now() - new Date(l.at).getTime()) / 86400000);
+    return days <= 0 ? 'ယနေ့ကစ' : days + ' ရက်ရှိပြီ';
+  }
+
+  function updateTabCounts() {
+    [...tabsEl.children].forEach(t => {
+      if (!t.dataset.label) t.dataset.label = t.textContent;
+      const f = t.dataset.filter;
+      const n = f === 'all' ? devices.length : devices.filter(d => d.status === f).length;
+      t.textContent = t.dataset.label + ' (' + n + ')';
+    });
+  }
+
   function render() {
     if (!currentUser) return;
-    const filtered = filter === 'all' ? devices : devices.filter(d => d.status === filter);
+    updateTabCounts();
+    let filtered = filter === 'all' ? devices.slice() : devices.filter(d => d.status === filter);
+    const q = (document.getElementById('searchBox').value || '').trim().toLowerCase();
+    if (q) filtered = filtered.filter(d => [d.voucher, d.customer, d.phone, d.device].some(v => (v || '').toLowerCase().includes(q)));
+    const key = (d) => new Date(d.createdAt || d.date || 0).getTime();
+    filtered.sort((a, b) => document.getElementById('sortSel').value === 'old' ? key(a) - key(b) : key(b) - key(a));
     listEl.innerHTML = '';
     if (filtered.length === 0) {
       listEl.innerHTML = '<div class="empty">ဒီအခြေအနေမှာ ပစ္စည်းမရှိသေးပါ</div>';
@@ -499,28 +704,31 @@
             <span class="badge">${STATUS_LABEL[d.status]}</span>
           </div>
           ${d.issue ? `<div class="card-issue">${escapeHtml(d.issue)}</div>` : ''}
+          ${d.status === 'waiting_parts' ? `<div class="card-wait">⏳ အပိုပစ္စည်းစောင့်နေ${d.partsNeeded ? ' — <b>' + escapeHtml(d.partsNeeded) + '</b>' : ''} · ${waitingText(d)}</div>` : ''}
           <div class="card-people">
+            <span>လက်ခံရက်- <b>${escapeHtml(d.date || '-')}</b>${(d.status !== 'done' && d.status !== 'unrepairable' && daysSince(d.date || d.createdAt) !== null) ? `<span class="age${daysSince(d.date || d.createdAt) >= 7 ? ' old' : ''}">${dayLabel(daysSince(d.date || d.createdAt))}ရှိပြီ</span>` : ''}</span>
+            <span>အခြေအနေ- <b>${STATUS_LABEL[d.status]}</b> (${dayLabel(daysSince(statusSince(d)))}${daysSince(statusSince(d)) === 0 ? '' : 'ကတည်းက'})</span>
             ${d.receivedBy ? `<span>လက်ခံသူ- <b>${escapeHtml(d.receivedBy)}</b></span>` : ''}
             ${d.technician ? `<span>ပြင်မည့်သူ- <b>${escapeHtml(d.technician)}</b></span>` : ''}
           </div>
           ${currentUser.role === 'owner' ? `
           <div class="card-meta">
-            <span>လက်ခံ- <b>${d.date || '-'}</b></span>
             <span>ပြင်ဆင်ခ- <b>${fmt(d.quote)}</b></span>
             <span>အပိုပစ္စည်း- <b>${fmt(d.parts)}</b></span>
             <span>အမြတ်- <b>${fmt(d.quote - d.parts)}</b></span>
           </div>` : ''}
-          ${lastLog ? `<div class="card-lastchange">နောက်ဆုံးပြောင်း- <b>${escapeHtml(lastLog.by)}</b> က "${STATUS_LABEL[lastLog.to]}" သို့ ပြောင်းခဲ့ (${fmtTime(lastLog.at)})</div>` : ''}
+          ${lastLog ? `<div class="card-lastchange">နောက်ဆုံးပြောင်း- <b>${escapeHtml(lastLog.by)}</b> က ${lastLog.type === 'edit' ? 'အချက်အလက် ပြင်ခဲ့' : '"' + STATUS_LABEL[lastLog.to] + '" သို့ ပြောင်းခဲ့'} (${fmtTime(lastLog.at)})</div>` : ''}
           <div class="card-actions">
             <select data-id="${d.id}" class="statusSelect">
               ${Object.entries(STATUS_LABEL).map(([k,v]) => `<option value="${k}" ${k===d.status?'selected':''}>${v}</option>`).join('')}
             </select>
-            ${d.log && d.log.length > 1 ? `<button class="histbtn" data-id="${d.id}">မှတ်တမ်း (${d.log.length})</button>` : ''}
+            ${d.log && d.log.length > 0 ? `<button class="histbtn" data-id="${d.id}">မှတ်တမ်း (${d.log.length})</button>` : ''}
+            <button class="editbtn" data-id="${d.id}">✏️ ပြင်မည်</button>
             <button class="printbtn" data-id="${d.id}">🖨 ဘောင်ချာ</button>
             ${currentUser.role === 'owner' ? `<button class="del" data-id="${d.id}">ဖျက်မည်</button>` : ''}
           </div>
           <div class="history" id="hist-${d.id}">
-            ${(d.log || []).slice().reverse().map(l => `<div class="row"><b>${escapeHtml(l.by)}</b> — ${l.from ? STATUS_LABEL[l.from] + ' → ' : ''}${STATUS_LABEL[l.to]} <span style="opacity:.7">(${fmtTime(l.at)})</span></div>`).join('')}
+            ${(d.log || []).slice().reverse().map(logRowHtml).join('')}
           </div>
         `;
         listEl.appendChild(card);
@@ -537,8 +745,13 @@
       if (dev && dev.status !== newStatus) {
         const now = new Date().toISOString();
         const logEntry = { from: dev.status, to: newStatus, by: currentUser.name || currentUser.email, at: now };
+        const upd = { status: newStatus, log: firebase.firestore.FieldValue.arrayUnion(logEntry) };
+        if (newStatus === 'waiting_parts') {
+          const p = prompt('ဘာအပိုပစ္စည်း စောင့်နေတာလဲ? (မရေးလည်းရပါတယ်)', dev.partsNeeded || '');
+          upd.partsNeeded = p ? p.trim() : '';
+        }
         try {
-          await db.collection('devices').doc(id).update({ status: newStatus, log: firebase.firestore.FieldValue.arrayUnion(logEntry) });
+          await db.collection('devices').doc(id).update(upd);
         } catch (err) { alert('Update မအောင်မြင်ပါ: ' + err.message); }
       }
     }
@@ -550,6 +763,9 @@
     }
     if (e.target.classList.contains('histbtn')) {
       document.getElementById('hist-' + e.target.dataset.id).classList.toggle('open');
+    }
+    if (e.target.classList.contains('editbtn')) {
+      openEdit(e.target.dataset.id);
     }
     if (e.target.classList.contains('printbtn')) {
       showReceipt(e.target.dataset.id);
@@ -612,7 +828,13 @@
       }
     };
 
-    center('⚡ Electronics Service', 700, 30);
+    center(shopInfo.name || 'Electronics Service', 700, 30);
+    if (shopInfo.address) {
+      setFont(400, 20); ctx.textAlign = 'center';
+      wrapText(ctx, shopInfo.address, W - PAD * 2).forEach(l => { ctx.fillText(l, W / 2, y); y += 28; });
+      y += 4;
+    }
+    if (shopInfo.phone) center('ဖုန်း: ' + shopInfo.phone, 400, 20);
     center(fmtTime(d.createdAt || d.date), 400, 20);
     hr();
     row('ဘောင်ချာနံပါတ်', d.voucher || '-');
@@ -680,6 +902,9 @@
     const d = devices.find(x => x.id === id);
     if (!d) return;
     currentReceiptId = id;
+    document.getElementById('rShop').textContent = shopInfo.name || 'Electronics Service';
+    document.getElementById('rAddr').textContent = shopInfo.address || '';
+    document.getElementById('rShopPhone').textContent = shopInfo.phone ? 'ဖုန်း: ' + shopInfo.phone : '';
     document.getElementById('rDate').textContent = fmtTime(d.createdAt || d.date);
     document.getElementById('rVoucher').textContent = d.voucher || '-';
     document.getElementById('rCustomer').textContent = d.customer || '-';
