@@ -518,6 +518,7 @@
             </select>
             ${d.log && d.log.length > 1 ? `<button class="histbtn" data-id="${d.id}">မှတ်တမ်း (${d.log.length})</button>` : ''}
             <button class="printbtn" data-id="${d.id}">🖨 ဘောင်ချာ</button>
+            <button class="printbtn rawbtbtn" data-id="${d.id}">📲 RawBT</button>
             ${currentUser.role === 'owner' ? `<button class="del" data-id="${d.id}">ဖျက်မည်</button>` : ''}
           </div>
           <div class="history" id="hist-${d.id}">
@@ -552,10 +553,55 @@
     if (e.target.classList.contains('histbtn')) {
       document.getElementById('hist-' + e.target.dataset.id).classList.toggle('open');
     }
-    if (e.target.classList.contains('printbtn')) {
+    if (e.target.classList.contains('rawbtbtn')) {
+      printViaRawBT(e.target.dataset.id);
+    } else if (e.target.classList.contains('printbtn')) {
       printReceipt(e.target.dataset.id);
     }
   });
+
+  function buildEscPosReceipt(d) {
+    const ESC = '\x1B', GS = '\x1D';
+    let s = '';
+    s += ESC + '@';            // initialize
+    s += ESC + 'a' + '\x01';   // center align
+    s += 'Electronics Service\n';
+    s += (fmtTime(d.createdAt || d.date)) + '\n';
+    s += '--------------------------------\n';
+    s += ESC + 'a' + '\x00';   // left align
+    s += 'Voucher: ' + (d.voucher || '-') + '\n';
+    s += 'Customer: ' + (d.customer || '-') + '\n';
+    s += 'Phone: ' + (d.phone || '-') + '\n';
+    s += 'Device: ' + (d.device || '-') + '\n';
+    s += '--------------------------------\n';
+    s += 'Issue: ' + (d.issue || '-') + '\n';
+    s += '--------------------------------\n';
+    s += ESC + 'E' + '\x01'; // bold on
+    s += 'Est. Price: ' + fmt(d.quote) + '\n';
+    s += ESC + 'E' + '\x00'; // bold off
+    s += '--------------------------------\n';
+    s += '\n\n\n';
+    s += GS + 'V' + '\x00'; // full cut
+    return s;
+  }
+
+  async function printViaRawBT(id) {
+    const d = devices.find(x => x.id === id);
+    if (!d) return;
+    const text = buildEscPosReceipt(d);
+    if (navigator.share) {
+      try {
+        await navigator.share({ text });
+      } catch (e) { /* user cancelled share sheet, ignore */ }
+    } else {
+      try {
+        await navigator.clipboard.writeText(text);
+        alert('ဒီ browser မှာ Share တိုက်ရိုက် မရပါ — ဘောင်ချာ text ကို clipboard ထဲ ကူးပေးထားပါပြီ။ RawBT app ကို ဖွင့်ပြီး paste ကူးပါ။');
+      } catch (e) {
+        alert('Share/Copy မအောင်မြင်ပါ: ' + e.message);
+      }
+    }
+  }
 
   function printReceipt(id) {
     const d = devices.find(x => x.id === id);
