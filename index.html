@@ -111,15 +111,20 @@
   .card[data-status="ready"] { border-left-color: var(--teal); }
   .card[data-status="unrepairable"] { border-left-color: var(--red); }
   .card[data-status="done"] { border-left-color: var(--green); opacity: 0.85; }
-  .card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
-  .card-top .voucher { font-family: var(--font-head); font-size: 0.72rem; color: var(--copper); letter-spacing: 0.3px; }
-  .card-top .device { font-family: var(--font-head); font-weight: 700; font-size: 1rem; margin-top: 1px; }
-  .card-top .customer { color: var(--muted); font-size: 0.85rem; margin-top: 2px; }
+  .card-top { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+  .card-top .voucher { font-family: var(--font-head); font-size: 0.8rem; font-weight: 700; color: var(--copper); letter-spacing: 0.3px; }
+  .card-fields { margin-top: 10px; border-top: 1px solid var(--line); }
+  .card-fields .row { display: flex; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--line); align-items: baseline; }
+  .card-fields .lb { flex: 0 0 104px; color: var(--muted); font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.3px; }
+  .card-fields .vl { flex: 1; min-width: 0; font-size: 0.92rem; word-break: break-word; }
+  .card-fields .vl.strong { font-weight: 700; font-family: var(--font-head); font-size: 1rem; }
+  .card-fields .vl.issue { color: #e8c9a0; }
+  .card-fields .vl a { color: var(--teal); text-decoration: none; }
   .badge { font-size: 0.72rem; padding: 3px 9px; border-radius: 999px; white-space: nowrap; border: 1px solid var(--line); color: var(--muted); }
   .card-issue { font-size: 0.87rem; color: var(--text); margin-top: 8px; }
-  .card-meta { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 10px; font-size: 0.82rem; color: var(--muted); }
+  .card-meta { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-top: 10px; padding: 8px 10px; background: var(--surface-2); border-radius: 8px; font-size: 0.82rem; color: var(--muted); }
   .card-meta b { color: var(--text); }
-  .card-people { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 6px; font-size: 0.8rem; color: var(--muted); }
+  .card-people { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 10px; font-size: 0.78rem; color: var(--muted); }
   .card-people b { color: var(--teal); }
   .card-lastchange { margin-top: 8px; font-size: 0.78rem; color: var(--muted); font-style: italic; }
   .card-lastchange b { color: var(--copper); font-style: normal; }
@@ -1032,20 +1037,21 @@
         card.dataset.status = d.status;
         card.innerHTML = `
           <div class="card-top">
-            <div>
-              <div class="voucher">${escapeHtml(d.voucher || '')}</div>
-              <div class="device">${escapeHtml(d.device)}</div>
-              <div class="customer">${escapeHtml(d.customer)}${d.phone ? ' · ' + escapeHtml(d.phone) : ''}</div>
-            </div>
+            <div class="voucher">${escapeHtml(d.voucher || '')}</div>
             <span class="badge">${STATUS_LABEL[d.status]}</span>
           </div>
-          ${d.issue ? `<div class="card-issue">${escapeHtml(d.issue)}</div>` : ''}
+          <div class="card-fields">
+            <div class="row"><span class="lb">Device</span><span class="vl strong">${escapeHtml(d.device || '-')}</span></div>
+            <div class="row"><span class="lb">Customer Name</span><span class="vl">${escapeHtml(d.customer || '-')}</span></div>
+            <div class="row"><span class="lb">Phone</span><span class="vl">${d.phone ? `<a href="tel:${escapeHtml(d.phone)}">${escapeHtml(d.phone)}</a>` : '-'}</span></div>
+            <div class="row"><span class="lb">Error</span><span class="vl issue">${escapeHtml(d.issue || '-')}</span></div>
+          </div>
           ${d.status === 'waiting_parts' ? `<div class="card-wait">⏳ အပိုပစ္စည်းစောင့်နေ${d.partsNeeded ? ' — <b>' + escapeHtml(d.partsNeeded) + '</b>' : ''} · ${waitingText(d)}</div>` : ''}
           <div class="card-people">
-            <span>လက်ခံရက်- <b>${escapeHtml(d.date || '-')}</b>${(d.status !== 'done' && d.status !== 'unrepairable' && daysSince(d.date || d.createdAt) !== null) ? `<span class="age${daysSince(d.date || d.createdAt) >= 7 ? ' old' : ''}">${dayLabel(daysSince(d.date || d.createdAt))}ရှိပြီ</span>` : ''}</span>
-            <span>အခြေအနေ- <b>${STATUS_LABEL[d.status]}</b> (${dayLabel(daysSince(statusSince(d)))}${daysSince(statusSince(d)) === 0 ? '' : 'ကတည်းက'})</span>
-            ${d.receivedBy ? `<span>လက်ခံသူ- <b>${escapeHtml(d.receivedBy)}</b></span>` : ''}
-            ${d.technician ? `<span>ပြင်မည့်သူ- <b>${escapeHtml(d.technician)}</b></span>` : ''}
+            <span>လက်ခံရက် <b>${escapeHtml(d.date || '-')}</b>${(d.status !== 'done' && d.status !== 'unrepairable' && daysSince(d.date || d.createdAt) !== null) ? `<span class="age${daysSince(d.date || d.createdAt) >= 7 ? ' old' : ''}">${dayLabel(daysSince(d.date || d.createdAt))}ရှိပြီ</span>` : ''}</span>
+            <span>ဒီအခြေအနေ <b>${dayLabel(daysSince(statusSince(d)))}${daysSince(statusSince(d)) === 0 ? '' : 'ကတည်းက'}</b></span>
+            ${d.receivedBy ? `<span>လက်ခံသူ <b>${escapeHtml(d.receivedBy)}</b></span>` : ''}
+            ${d.technician ? `<span>ပြင်မည့်သူ <b>${escapeHtml(d.technician)}</b></span>` : ''}
           </div>
           ${canSeeMoney() ? `
           <div class="card-meta">
