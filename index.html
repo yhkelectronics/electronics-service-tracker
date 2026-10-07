@@ -387,6 +387,11 @@
   const roleSelectHtml = (cls, cur, extra) => `<select class="${cls}" ${extra || ''}>${ROLE_OPTIONS.map(([k,v]) => `<option value="${k}" ${k===cur?'selected':''}>${v}</option>`).join('')}</select>`;
   const isOwner = () => !!currentUser && currentUser.role === 'owner';
   const isAccountant = () => !!currentUser && currentUser.role === 'accountant';
+  // ပြီးစီး (done) ဖြစ်သွားရင် ပိုင်ရှင်မှလွဲ၍ status/ပြင်မည် အားလုံး ပိတ်
+  const isLockedFor = (d) => !!d && d.status === 'done' && !isOwner();
+  // စာရင်းကိုင် တစ်ကြိမ်သိမ်းပြီးရင် (acctEdited) ပြင်မည် ထပ်မပေါ်၊ လက်ခံ/စစ်ဆေးနေဆဲ ပြန်မပြောင်းရ
+  const editBlocked = (d) => isLockedFor(d) || (isAccountant() && !!d && !!d.acctEdited);
+  const backStatusBlocked = (d, k) => !!d && !!d.acctEdited && !isOwner() && (k === 'received' || k === 'checking');
   const canEditRecord = () => isOwner() || isAccountant();   // ပြင်မည် ခလုတ် မြင်ခွင့်
   const canSeeMoney = () => isOwner() || isAccountant();     // အပိုပစ္စည်း/အမြတ် မြင်ခွင့်
   function roleOf(r) { return ROLE_LABEL[r] || r || ''; }
@@ -827,7 +832,7 @@
   function openEdit(id) {
     const d = devices.find(x => x.id === id);
     if (!d) return;
-    if (!canEditRecord()) { alert('ပြင်ခွင့်မရှိပါ'); return; }
+    if (!canEditRecord() || editBlocked(d)) { alert('ပြင်ခွင့်မရှိပါ'); return; }
     editingId = id;
     document.getElementById('fVoucher').value = d.voucher || '';
     document.getElementById('fCustomer').value = d.customer || '';
@@ -881,7 +886,7 @@
     if (editingId) {
       const old = devices.find(x => x.id === editingId);
       if (!old) { exitEdit(); return; }
-      if (!canEditRecord()) { alert('ပြင်ခွင့်မရှိပါ'); exitEdit(); return; }
+      if (!canEditRecord() || editBlocked(old)) { alert('ပြင်ခွင့်မရှိပါ'); exitEdit(); return; }
       const nv = isAccountant() ? {
         quote: Number(document.getElementById('fQuote').value) || 0,
         parts: Number(document.getElementById('fParts').value) || 0
@@ -902,11 +907,32 @@
         const a = (k === 'quote' || k === 'parts') ? (old[k] || 0) : (old[k] == null ? '' : old[k]);
         if (String(a) !== String(nv[k])) changes.push({ key: k, f: EDIT_LABELS[k], from: a, to: nv[k] });
       }
-      if (!changes.length) { exitEdit(); clearForm(); formPanel.classList.remove('open'); return; }
+      // စာရင်းကိုင် — နှစ်ကွက်လုံးမှာ ကိန်းဂဏန်း (0 အပါအဝင်) ဖြည့်ထားမှ "ပြင်ဆင်နေဆဲ" ပြောင်း + ပြင်မည် ပိတ်
+      const qRaw = document.getElementById('fQuote').value.trim();
+      const pRaw = document.getElementById('fParts').value.trim();
+      const isNum = (v) => v !== '' && /^[0-9]+(\.[0-9]+)?$/.test(v);
+      const acctComplete = isAccountant() && isNum(qRaw) && isNum(pRaw);
+      if (!changes.length && !acctComplete) {
+        if (isAccountant()) alert('ခန့်မှန်းပြင်ဆင်ခ နဲ့ အပိုပစ္စည်းကုန်ကျစရိတ် နှစ်ကွက်လုံးမှာ ကိန်းဂဏန်း (0 ကစပြီး) ဖြည့်မှ ပြင်ဆင်နေဆဲ သို့ ပြောင်းပါမယ်');
+        exitEdit(); clearForm(); formPanel.classList.remove('open'); return;
+      }
       saveBtn.disabled = true;
       try {
         const entry2 = { type: 'edit', by: currentUser.name || currentUser.email, byRole: titleOf(currentUser), at: new Date().toISOString(), changes };
-        await db.collection('devices').doc(editingId).update({ ...nv, log: firebase.firestore.FieldValue.arrayUnion(entry2) });
+        const logs = [];
+        if (changes.length) logs.push(entry2);
+        const upd2 = { ...nv };
+        if (acctComplete) {
+          // သိမ်းလိုက်တာနဲ့ "ပြင်ဆင်နေဆဲ" သို့ အလိုအလျောက်ပြောင်း + နောက်ထပ်ပြင်မရအောင် flag ထား
+          upd2.acctEdited = true;
+          if (old.status !== 'repairing') {
+            upd2.status = 'repairing';
+            logs.push({ from: old.status, to: 'repairing', by: currentUser.name || currentUser.email, byRole: titleOf(currentUser), at: new Date().toISOString() });
+          }
+        }
+        if (logs.length) upd2.log = firebase.firestore.FieldValue.arrayUnion(...logs);
+        await db.collection('devices').doc(editingId).update(upd2);
+        if (isAccountant() && !acctComplete) alert('သိမ်းပြီးပါပြီ။ နှစ်ကွက်လုံးမှာ ကိန်းဂဏန်း (0 ကစပြီး) ဖြည့်မှ ပြင်ဆင်နေဆဲ သို့ ပြောင်းပြီး ပြင်မည်ခလုတ် ပိတ်ပါမယ်');
         exitEdit(); clearForm(); formPanel.classList.remove('open');
       } catch (e) { alert('ပြင်လို့ မအောင်မြင်ပါ: ' + e.message); }
       saveBtn.disabled = false;
@@ -1029,12 +1055,12 @@
           </div>` : ''}
           ${lastLog ? `<div class="card-lastchange">နောက်ဆုံးပြောင်း- <b>${escapeHtml(lastLog.by)}${lastLog.byRole ? ' (' + roleOf(lastLog.byRole) + ')' : ''}</b> က ${lastLog.type === 'edit' ? 'အချက်အလက် ပြင်ခဲ့' : '"' + STATUS_LABEL[lastLog.to] + '" သို့ ပြောင်းခဲ့'} (${fmtTime(lastLog.at)})</div>` : ''}
           <div class="card-actions">
-            <select data-id="${d.id}" class="statusSelect">
-              ${Object.entries(STATUS_LABEL).map(([k,v]) => `<option value="${k}" ${k===d.status?'selected':''}>${v}</option>`).join('')}
+            <select data-id="${d.id}" class="statusSelect" ${isLockedFor(d) ? 'disabled' : ''}>
+              ${Object.entries(STATUS_LABEL).map(([k,v]) => `<option value="${k}" ${k===d.status?'selected':''} ${(k!==d.status && backStatusBlocked(d,k))?'disabled':''}>${v}</option>`).join('')}
             </select>
             ${d.log && d.log.length > 0 ? `<button class="histbtn" data-id="${d.id}">မှတ်တမ်း (${d.log.length})</button>` : ''}
             ${((isOwner() || (currentUser && currentUser.role === 'technician')) && !d.technician && d.status !== 'done' && d.status !== 'unrepairable') ? `<button class="takebtn" data-id="${d.id}">🔧 ပြုပြင်မည်</button>` : ''}
-            ${canEditRecord() ? `<button class="editbtn" data-id="${d.id}">✏️ ပြင်မည်</button>` : ''}
+            ${(canEditRecord() && !editBlocked(d)) ? `<button class="editbtn" data-id="${d.id}">✏️ ပြင်မည်</button>` : ''}
             <button class="printbtn" data-id="${d.id}">🖨 ဘောင်ချာ</button>
             ${currentUser.role === 'owner' ? `<button class="del" data-id="${d.id}">ဖျက်မည်</button>` : ''}
           </div>
@@ -1053,6 +1079,8 @@
       const id = e.target.dataset.id;
       const dev = devices.find(x => x.id === id);
       const newStatus = e.target.value;
+      if (isLockedFor(dev)) { alert('ပြီးစီးပြီးသား ပစ္စည်းကို ပိုင်ရှင်သာ ပြောင်းလို့ရပါတယ်'); render(); return; }
+      if (backStatusBlocked(dev, newStatus)) { alert('လက်ခံရရှိ / စစ်ဆေးနေဆဲ သို့ ပြန်ပြောင်းခွင့်မရှိပါ'); render(); return; }
       if (!requireLicense()) { render(); return; }
       if (dev && dev.status !== newStatus) {
         const now = new Date().toISOString();
