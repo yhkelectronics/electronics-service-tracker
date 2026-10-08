@@ -113,6 +113,7 @@
   .card[data-status="done"] { border-left-color: var(--green); opacity: 0.85; }
   .card-top { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
   .card-top .voucher { font-family: var(--font-head); font-size: 0.8rem; font-weight: 700; color: var(--copper); letter-spacing: 0.3px; }
+  .carry { font-family: var(--font-body); font-weight: 500; font-size: 0.7rem; color: #e0b93f; background: rgba(212,160,23,0.12); border: 1px solid rgba(212,160,23,0.35); border-radius: 999px; padding: 1px 8px; margin-left: 6px; }
   .card-fields { margin-top: 10px; border-top: 1px solid var(--line); }
   .card-fields .row { display: flex; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--line); align-items: baseline; }
   .card-fields .lb { flex: 0 0 104px; color: var(--muted); font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.3px; }
@@ -221,6 +222,9 @@
         <p id="hdrDesc">Electronics Service — အဝင်အထွက် / ဝင်ငွေထွက်ငွေ / အခြေအနေ</p>
       </div>
     </div>
+    <div class="searchrow" id="monthRow" style="margin:10px 0 0;">
+      <select id="monthSel" style="max-width:none; flex:1;"></select>
+    </div>
     <div class="searchrow" id="searchRow" style="margin:10px 0 0;">
     <input id="searchBox" type="search" placeholder="ဘောင်ချာ / customer / ဖုန်း / စက် ရှာရန်...">
     <select id="sortSel"><option value="new">အသစ်ဆုံးအရင်</option><option value="old">အဟောင်းဆုံးအရင်</option></select>
@@ -243,8 +247,9 @@
 <main>
   <div class="panel" id="dashPanel">
     <h2>📊 Dashboard</h2>
+  <div id="statMonthLbl" style="font-size:0.85rem; color:var(--copper); margin:2px 0 8px; font-weight:600;"></div>
   <div class="stats" id="statsBar" style="display:none; margin-bottom:12px;">
-    <div class="stat"><div class="label">စက်ပစ္စည်း (အားလုံး)</div><div class="value" id="statTotal">0</div></div>
+    <div class="stat"><div class="label">စက်ပစ္စည်း (ဒီလ)</div><div class="value" id="statTotal">0</div></div>
     <div class="stat income"><div class="label">ဝင်ငွေ (ပြီးစီးမှု)</div><div class="value" id="statIncome">0</div></div>
     <div class="stat expense"><div class="label">အပိုပစ္စည်းကုန်ကျစရိတ်</div><div class="value" id="statExpense">0</div></div>
     <div class="stat profit"><div class="label">လက်ကျန်အမြတ်ငွေ</div><div class="value" id="statProfit">0</div></div>
@@ -579,6 +584,7 @@
         document.getElementById('statsBar').style.display = 'none';
       document.getElementById('toolbarBox').style.display = 'none';
       document.getElementById('searchRow').style.display = 'none';
+      document.getElementById('monthRow').style.display = 'none';
       document.getElementById('list').innerHTML = '';
       loginOverlay.style.display = 'flex';
       showLoginState('main');
@@ -612,6 +618,7 @@
     document.getElementById('whoamiBox').style.display = 'flex';
     document.getElementById('toolbarBox').style.display = 'flex';
     document.getElementById('searchRow').style.display = 'flex';
+    document.getElementById('monthRow').style.display = 'flex';
     document.getElementById('menuName').textContent = currentUser.name || currentUser.email;
     document.getElementById('menuRole').textContent = titleOf(currentUser) + ' · ' + currentUser.email;
     applyShopHeader(); updateEditorBar(); renderLicenseBanner();
@@ -980,9 +987,15 @@
   });
 
   /* ---------- LIST / CARDS ---------- */
+  // ပြက္ခဒိန်ရက်အလိုက် တွက် (ညသန်းခေါင်ကျော်ရင် ၁ ရက်တိုး) — နာရီ ၂၄ နာရီအပြည့်ကို မစောင့်
   function daysSince(iso) {
     if (!iso) return null;
-    return Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 86400000));
+    let t;
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso));
+    t = m ? new Date(+m[1], +m[2] - 1, +m[3]) : new Date(iso);
+    if (isNaN(t.getTime())) return null;
+    const dayStart = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+    return Math.max(0, Math.round((dayStart(new Date()) - dayStart(t)) / 86400000));
   }
   function statusSince(d) {
     const l = (d.log || []).slice().reverse().find(x => x.to);
@@ -1009,26 +1022,77 @@
     return days <= 0 ? 'ယနေ့ကစ' : days + ' ရက်ရှိပြီ';
   }
 
+  // ===== လအလိုက် ခွဲခြားခြင်း =====
+  const MM_MONTHS = ['ဇန်နဝါရီ','ဖေဖော်ဝါရီ','မတ်','ဧပြီ','မေ','ဇွန်','ဇူလိုင်','ဩဂုတ်','စက်တင်ဘာ','အောက်တိုဘာ','နိုဝင်ဘာ','ဒီဇင်ဘာ'];
+  const monthKeyNow = () => { const n = new Date(); return n.getFullYear() + '-' + String(n.getMonth() + 1).padStart(2, '0'); };
+  const monthLabel = (k) => { const [y, m] = k.split('-'); return y + ' ' + MM_MONTHS[(+m) - 1]; };
+  // ဘောင်ချာတစ်ခုရဲ့ လ (လက်ခံရက်အရ၊ မရှိရင် ဖန်တီးတဲ့ရက်)
+  function monthOf(d) {
+    const m = /^(\d{4})-(\d{2})/.exec(String(d.date || ''));
+    if (m) return m[1] + '-' + m[2];
+    if (d.createdAt) { const t = new Date(d.createdAt); if (!isNaN(t)) return t.getFullYear() + '-' + String(t.getMonth() + 1).padStart(2, '0'); }
+    return '';
+  }
+  // 'cur' = လက်ရှိလ (လပြောင်းရင် အလိုအလျောက် လသစ်ကို ညွှန်း)၊ 'all' = လအားလုံး
+  function selectedMonth() {
+    const v = document.getElementById('monthSel').value || 'cur';
+    return v === 'cur' ? monthKeyNow() : v;
+  }
+  const isAllMonths = () => (document.getElementById('monthSel').value === 'all');
+  // ဒီလထဲမှာ လက်ခံထားတဲ့ ဘောင်ချာများ (Dashboard တွက်ရန်)
+  const monthStrict = () => isAllMonths() ? devices.slice() : devices.filter(d => monthOf(d) === selectedMonth());
+  // စာရင်းပြရန် — လက်ရှိလကို ကြည့်နေရင် ယခင်လက မပြီးသေးတာတွေပါ ထည့်ပြ
+  function monthView() {
+    if (isAllMonths()) return devices.slice();
+    const m = selectedMonth(), cur = monthKeyNow();
+    return devices.filter(d => {
+      const dm = monthOf(d);
+      if (dm === m) return true;
+      return m === cur && dm && dm < m && d.status !== 'done' && d.status !== 'unrepairable';
+    });
+  }
+  function refreshMonthOptions() {
+    const sel = document.getElementById('monthSel');
+    const prev = sel.value || 'cur';
+    const cur = monthKeyNow();
+    const set = new Set(devices.map(monthOf).filter(Boolean));
+    set.delete(cur);
+    const keys = [...set].sort().reverse();
+    sel.innerHTML = `<option value="cur">📅 ယခုလ — ${monthLabel(cur)}</option>` +
+      keys.map(k => `<option value="${k}">${monthLabel(k)}</option>`).join('') +
+      `<option value="all">လအားလုံး</option>`;
+    sel.value = [...sel.options].some(o => o.value === prev) ? prev : 'cur';
+  }
+  document.getElementById('monthSel').addEventListener('change', render);
+  // လပြောင်းသွားရင် (ညသန်းခေါင်ကျော်) အလိုအလျောက် ပြန်ဆွဲ
+  let lastMonthSeen = monthKeyNow();
+  setInterval(() => { const n = monthKeyNow(); if (n !== lastMonthSeen) { lastMonthSeen = n; render(); } }, 60000);
+  // စာရင်းအတွက် အခြေခံ — ရှာဖွေနေရင် လအားလုံးထဲက ရှာ
+  const listBase = () => ((document.getElementById('searchBox').value || '').trim() ? devices.slice() : monthView());
+
   function updateTabCounts() {
     [...tabsEl.children].forEach(t => {
       if (!t.dataset.label) t.dataset.label = t.textContent;
       const f = t.dataset.filter;
-      const n = f === 'all' ? devices.length : devices.filter(d => d.status === f).length;
+      const base = listBase();
+      const n = f === 'all' ? base.length : base.filter(d => d.status === f).length;
       t.textContent = t.dataset.label + ' (' + n + ')';
     });
   }
 
   function render() {
     if (!currentUser) return;
+    refreshMonthOptions();
     updateTabCounts();
-    let filtered = filter === 'all' ? devices.slice() : devices.filter(d => d.status === filter);
+    const baseList = listBase();
+    let filtered = filter === 'all' ? baseList.slice() : baseList.filter(d => d.status === filter);
     const q = (document.getElementById('searchBox').value || '').trim().toLowerCase();
     if (q) filtered = filtered.filter(d => [d.voucher, d.customer, d.phone, d.device].some(v => (v || '').toLowerCase().includes(q)));
     const key = (d) => new Date(d.createdAt || d.date || 0).getTime();
     filtered.sort((a, b) => document.getElementById('sortSel').value === 'old' ? key(a) - key(b) : key(b) - key(a));
     listEl.innerHTML = '';
     if (filtered.length === 0) {
-      listEl.innerHTML = '<div class="empty">ဒီအခြေအနေမှာ ပစ္စည်းမရှိသေးပါ</div>';
+      listEl.innerHTML = '<div class="empty">ဒီလ / ဒီအခြေအနေမှာ ပစ္စည်းမရှိသေးပါ</div>';
     } else {
       filtered.forEach(d => {
         const lastLog = d.log && d.log.length ? d.log[d.log.length - 1] : null;
@@ -1037,7 +1101,7 @@
         card.dataset.status = d.status;
         card.innerHTML = `
           <div class="card-top">
-            <div class="voucher">${escapeHtml(d.voucher || '')}</div>
+            <div class="voucher">${escapeHtml(d.voucher || '')}${(!isAllMonths() && monthOf(d) !== selectedMonth()) ? ` <span class="carry">ယခင်လ (${escapeHtml(monthOf(d))}) မှ မပြီးသေး</span>` : ''}</div>
             <span class="badge">${STATUS_LABEL[d.status]}</span>
           </div>
           <div class="card-fields">
@@ -1326,14 +1390,15 @@
   });
 
   function renderStats() {
-    const total = devices.length;
-    const doneDevices = devices.filter(d => d.status === 'done');
-    const income = doneDevices.reduce((s, d) => s + d.quote, 0);
-    const expense = doneDevices.reduce((s, d) => s + d.parts, 0);
-    document.getElementById('statTotal').textContent = total;
+    const list = monthStrict();
+    const doneDevices = list.filter(d => d.status === 'done');
+    const income = doneDevices.reduce((s, d) => s + (d.quote || 0), 0);
+    const expense = doneDevices.reduce((s, d) => s + (d.parts || 0), 0);
+    document.getElementById('statTotal').textContent = list.length;
     document.getElementById('statIncome').textContent = fmt(income);
     document.getElementById('statExpense').textContent = fmt(expense);
     document.getElementById('statProfit').textContent = fmt(income - expense);
+    document.getElementById('statMonthLbl').textContent = isAllMonths() ? '📅 လအားလုံး' : '📅 ' + monthLabel(selectedMonth());
   }
 </script>
 </body>
