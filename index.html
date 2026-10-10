@@ -353,8 +353,9 @@
       <div class="r-row"><span class="k">အခြေအနေ</span><span class="v" id="rStatus" style="font-weight:700;"></span></div>
       <hr>
       <div class="r-issue"><b>ချို့ယွင်းချက်:</b><br><span id="rIssue"></span></div>
+      <div class="r-issue" id="rReasonBox" style="display:none;"><b>မပြင်နိုင်ဖြစ်ရသည့် အကြောင်းအရင်း:</b><br><span id="rReason"></span></div>
       <hr>
-      <div class="r-total" id="rQuoteRow"><span>ပြင်ဆင်ခကျသင့်ငွေ</span><span id="rQuote"></span></div>
+      <div class="r-total" id="rQuoteRow"><span id="rQuoteLbl">ပြင်ဆင်ခကျသင့်ငွေ</span><span id="rQuote"></span></div>
       <hr>
       <div class="r-foot" id="rFoot" style="white-space:pre-line;">ပစ္စည်းယူချိန် ဒီဘောင်ချာကို ယူဆောင်လာပေးပါ</div>
       <div class="r-addr" id="rDate" style="text-align:right;margin-top:8px;font-size:11px;"></div>
@@ -1340,7 +1341,17 @@
     setFont(500);
     wrapText(ctx, d.issue || '-', W - PAD * 2).forEach(l => { ctx.fillText(l, PAD, y); y += LH; });
     hr();
-    row('ပြင်ဆင်ခကျသင့်ငွေ', String(fmt(d.quote || 0)), true, 28);
+    if (isFeeStatus(d)) {
+      if (d.unrepairReason) {
+        setFont(700); ctx.textAlign = 'left'; ctx.fillText('မပြင်နိုင်ဖြစ်ရသည့် အကြောင်းအရင်း:', PAD, y); y += LH;
+        setFont(500);
+        wrapText(ctx, d.unrepairReason, W - PAD * 2).forEach(l => { ctx.fillText(l, PAD, y); y += LH; });
+        hr();
+      }
+      row('စစ်ဆေးခ', String(fmt(inspectFeeOf(d))), true, 28);
+    } else {
+      row('ပြင်ဆင်ခကျသင့်ငွေ', String(fmt(d.quote || 0)), true, 28);
+    }
     hr();
     setFont(400, 20); ctx.textAlign = 'center';
     footerText().split('\n').forEach(par => wrapText(ctx, par, W - PAD * 2).forEach(l => { ctx.fillText(l, W / 2, y); y += 30; }));
@@ -1409,7 +1420,11 @@
     document.getElementById('rPhone').textContent = d.phone || '-';
     document.getElementById('rDevice').textContent = d.device || '-';
     document.getElementById('rIssue').textContent = d.issue || '-';
-    document.getElementById('rQuote').textContent = fmt(d.quote || 0);
+    const feeMode = isFeeStatus(d);   // မပြင်နိုင် — ပြင်ဆင်ခကို ဖျောက်ပြီး စစ်ဆေးခ ပြ
+    document.getElementById('rQuote').textContent = fmt(feeMode ? inspectFeeOf(d) : (d.quote || 0));
+    document.getElementById('rQuoteLbl').textContent = feeMode ? 'စစ်ဆေးခ' : 'ပြင်ဆင်ခကျသင့်ငွေ';
+    document.getElementById('rReasonBox').style.display = (feeMode && d.unrepairReason) ? '' : 'none';
+    document.getElementById('rReason').textContent = d.unrepairReason || '';
     document.getElementById('rStatus').textContent = receiptStatus(d);
     document.getElementById('receiptModal').classList.add('open');
   }
