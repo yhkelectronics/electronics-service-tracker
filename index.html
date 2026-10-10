@@ -114,6 +114,8 @@
   .card-top { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
   .card-top .voucher { font-family: var(--font-head); font-size: 0.8rem; font-weight: 700; color: var(--copper); letter-spacing: 0.3px; }
   .carry { font-family: var(--font-body); font-weight: 500; font-size: 0.7rem; color: #e0b93f; background: rgba(212,160,23,0.12); border: 1px solid rgba(212,160,23,0.35); border-radius: 999px; padding: 1px 8px; margin-left: 6px; }
+  .card-reason { margin-top: 10px; padding: 8px 10px; border-left: 3px solid var(--red); background: var(--surface-2); border-radius: 6px; font-size: 0.84rem; color: var(--muted); }
+  .card-reason b { color: var(--text); font-weight: 500; }
   .card-fields { margin-top: 10px; border-top: 1px solid var(--line); }
   .card-fields .row { display: flex; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--line); align-items: baseline; }
   .card-fields .lb { flex: 0 0 104px; color: var(--muted); font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.3px; }
@@ -250,7 +252,7 @@
   <div id="statMonthLbl" style="font-size:0.85rem; color:var(--copper); margin:2px 0 8px; font-weight:600;"></div>
   <div class="stats" id="statsBar" style="display:none; margin-bottom:12px;">
     <div class="stat"><div class="label">စက်ပစ္စည်း (ဒီလ)</div><div class="value" id="statTotal">0</div></div>
-    <div class="stat income"><div class="label">ဝင်ငွေ (ပြီးစီးမှု)</div><div class="value" id="statIncome">0</div></div>
+    <div class="stat income"><div class="label">ဝင်ငွေ (ပြီးစီး + စစ်ဆေးခ)</div><div class="value" id="statIncome">0</div></div>
     <div class="stat expense"><div class="label">အပိုပစ္စည်းကုန်ကျစရိတ်</div><div class="value" id="statExpense">0</div></div>
     <div class="stat profit"><div class="label">လက်ကျန်အမြတ်ငွေ</div><div class="value" id="statProfit">0</div></div>
   </div>
@@ -264,6 +266,7 @@
       <div class="field full"><label>Description (ဆိုင်ရဲ့ လုပ်ငန်းအကြောင်း)</label><input id="shopDesc" type="text" placeholder="လျှပ်စစ်ပစ္စည်းအမျိုးမျိုး ပြုပြင်ရေး"></div>
       <div class="field full"><label>ဖုန်းနံပါတ်</label><input id="shopPhone" type="text" placeholder="09..."></div>
       <div class="field full"><label>လိပ်စာ</label><textarea id="shopAddress" placeholder="လိပ်စာ"></textarea></div>
+      <div class="field full"><label>ဘောင်ချာအောက်ဆုံးက စာ (မရေးရင် မူလစာသား သုံးမယ်၊ စာကြောင်းအများကြီးရေးလို့ရ)</label><textarea id="shopFooter" placeholder="ပစ္စည်းယူချိန် ဒီဘောင်ချာကို ယူဆောင်လာပေးပါ"></textarea></div>
     </div>
     <div class="actions">
       <button class="primary" id="saveShopBtn">သိမ်းမည်</button>
@@ -284,7 +287,7 @@
         <select id="newStaffRole">
           <option value="technician">စက်ပြင်</option>
           <option value="staff">အခြား (သန့်ရှင်းရေး စသည်)</option>
-          <option value="accountant">စာရင်းကိုင် (ခန့်မှန်းခ / အပိုပစ္စည်းစရိတ်သာ ပြင်ခွင့်)</option>
+          <option value="accountant">စာရင်းကိုင် (ပြင်ဆင်ခ / အပိုပစ္စည်းစရိတ်သာ ပြင်ခွင့်)</option>
         </select>
       </div>
     </div>
@@ -322,8 +325,9 @@
       <div class="field"><label>လက်ခံသူ</label><input id="fReceivedBy" type="text" placeholder="မြမြ"></div>
       <div class="field"><label>ပြင်ဆင်မည့်သူ (assign)</label><input id="fTechnician" type="text" placeholder="အောင်အောင်"></div>
       <div class="field full"><label>ချို့ယွင်းချက် / ပြင်ဆင်ရန်</label><textarea id="fIssue" placeholder="ဖန်သားကွဲ၊ ဘက်ထရီအားနည်း..."></textarea></div>
-      <div class="field"><label>ခန့်မှန်း ပြင်ဆင်ခ (Ks)</label><input id="fQuote" type="number" min="0" placeholder="0"></div>
+      <div class="field"><label>ပြင်ဆင်ခ ကျသင့်ငွေ (Ks)</label><input id="fQuote" type="number" min="0" placeholder="0"></div>
       <div class="field"><label>အပိုပစ္စည်း ကုန်ကျစရိတ် (Ks)</label><input id="fParts" type="number" min="0" placeholder="0"></div>
+      <div class="field" id="fInspectWrap" style="display:none;"><label>စစ်ဆေးခ (Ks) — Customer မပြင်တော့ရင် ယူမည့်ငွေ</label><input id="fInspect" type="number" min="0" placeholder="0"></div>
     </div>
     <div class="actions">
       <button class="primary" id="saveBtn">သိမ်းမည်</button>
@@ -346,12 +350,13 @@
       <div class="r-row"><span class="k">Customer</span><span class="v" id="rCustomer"></span></div>
       <div class="r-row"><span class="k">ဖုန်း</span><span class="v" id="rPhone"></span></div>
       <div class="r-row"><span class="k">စက်ပစ္စည်း</span><span class="v" id="rDevice"></span></div>
+      <div class="r-row"><span class="k">အခြေအနေ</span><span class="v" id="rStatus" style="font-weight:700;"></span></div>
       <hr>
       <div class="r-issue"><b>ချို့ယွင်းချက်:</b><br><span id="rIssue"></span></div>
       <hr>
-      <div class="r-total"><span>ခန့်မှန်းကျသင့်ငွေ</span><span id="rQuote"></span></div>
+      <div class="r-total" id="rQuoteRow"><span>ပြင်ဆင်ခကျသင့်ငွေ</span><span id="rQuote"></span></div>
       <hr>
-      <div class="r-foot">ပစ္စည်းယူချိန် ဒီဘောင်ချာကို ယူဆောင်လာပေးပါ</div>
+      <div class="r-foot" id="rFoot" style="white-space:pre-line;">ပစ္စည်းယူချိန် ဒီဘောင်ချာကို ယူဆောင်လာပေးပါ</div>
       <div class="r-addr" id="rDate" style="text-align:right;margin-top:8px;font-size:11px;"></div>
     </div>
     <div class="modal-actions">
@@ -389,7 +394,9 @@
   let usersListenerStarted = false;
   let settingsListenerStarted = false;
   let licenseListenerStarted = false;
-  let shopInfo = { name: '', desc: '', phone: '', address: '' };
+  let shopInfo = { name: '', desc: '', phone: '', address: '', footer: '' };
+  const DEFAULT_FOOTER = 'ပစ္စည်းယူချိန် ဒီဘောင်ချာကို ယူဆောင်လာပေးပါ';
+  const footerText = () => (shopInfo.footer && shopInfo.footer.trim()) ? shopInfo.footer.trim() : DEFAULT_FOOTER;
   try { const c = JSON.parse(localStorage.getItem('shopInfo') || 'null'); if (c) shopInfo = { ...shopInfo, ...c }; } catch (e) {}
 
   const ROLE_LABEL = { owner: 'ပိုင်ရှင်', accountant: 'စာရင်းကိုင်', technician: 'စက်ပြင်', staff: 'အခြား ဝန်ထမ်း' };
@@ -400,8 +407,16 @@
   // ပြီးစီး (done) ဖြစ်သွားရင် ပိုင်ရှင်မှလွဲ၍ status/ပြင်မည် အားလုံး ပိတ်
   const isLockedFor = (d) => !!d && d.status === 'done' && !isOwner();
   // စာရင်းကိုင် တစ်ကြိမ်သိမ်းပြီးရင် (acctEdited) ပြင်မည် ထပ်မပေါ်၊ လက်ခံ/စစ်ဆေးနေဆဲ ပြန်မပြောင်းရ
-  const editBlocked = (d) => isLockedFor(d) || (isAccountant() && !!d && !!d.acctEdited);
+  const editBlocked = (d) => isLockedFor(d) || (isAccountant() && !!d && !!d.acctEdited && !isFeeStatus(d));
   const backStatusBlocked = (d, k) => !!d && !!d.acctEdited && !isOwner() && (k === 'received' || k === 'checking');
+  // စစ်ဆေးခ — Customer မပြင်တော့တဲ့အခါ ယူမည့်ငွေ (ဘောင်ချာတစ်ခုချင်း စိတ်ကြိုက်သတ်မှတ်)
+  // ဘောင်ချာ print မှာ ပြမယ့် အခြေအနေစာသား (လက်ရွေးထားတဲ့ status အတိုင်း)
+  const receiptStatus = (d) => ({ received: 'လက်ခံ', unrepairable: 'မပြင်နိုင်', done: 'ပြီးစီး' }[d.status] || STATUS_LABEL[d.status] || '-');
+  const FEE_STATUSES = ['unrepairable'];
+  const isFeeStatus = (d) => !!d && FEE_STATUSES.includes(d.status);
+  const inspectFeeOf = (d) => Number(d && d.inspectFee) || 0;
+  const lastInspectFee = () => { try { return localStorage.getItem('lastInspectFee') || ''; } catch (e) { return ''; } };
+  const rememberInspectFee = (v) => { try { localStorage.setItem('lastInspectFee', String(v)); } catch (e) {} };
   const canEditRecord = () => isOwner() || isAccountant();   // ပြင်မည် ခလုတ် မြင်ခွင့်
   const canSeeMoney = () => isOwner() || isAccountant();     // အပိုပစ္စည်း/အမြတ် မြင်ခွင့်
   function roleOf(r) { return ROLE_LABEL[r] || r || ''; }
@@ -687,6 +702,7 @@
     document.getElementById('shopDesc').value = shopInfo.desc || '';
     document.getElementById('shopPhone').value = shopInfo.phone || '';
     document.getElementById('shopAddress').value = shopInfo.address || '';
+    document.getElementById('shopFooter').value = shopInfo.footer || '';
     shopPanel.classList.add('open');
     shopPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
   });
@@ -696,7 +712,8 @@
       name: document.getElementById('shopName').value.trim(),
       desc: document.getElementById('shopDesc').value.trim(),
       phone: document.getElementById('shopPhone').value.trim(),
-      address: document.getElementById('shopAddress').value.trim()
+      address: document.getElementById('shopAddress').value.trim(),
+      footer: document.getElementById('shopFooter').value.trim()
     };
     shopInfo = data; applyShopHeader();
     try { localStorage.setItem('shopInfo', JSON.stringify(data)); } catch (e) {}
@@ -824,7 +841,7 @@
   function nextVoucherNumber() { return 'V-' + String(devices.length + 1).padStart(4, '0'); }
 
   let editingId = null;
-  const EDIT_LABELS = { voucher:'ဘောင်ချာနံပါတ်', customer:'Customer', phone:'ဖုန်း', device:'စက်ပစ္စည်း', receivedBy:'လက်ခံသူ', technician:'ပြင်မည့်သူ', issue:'ချို့ယွင်းချက်', date:'လက်ခံရက်စွဲ', quote:'ခန့်မှန်းပြင်ဆင်ခ', parts:'အပိုပစ္စည်းကုန်ကျစရိတ်' };
+  const EDIT_LABELS = { inspectFee:'စစ်ဆေးခ', voucher:'ဘောင်ချာနံပါတ်', customer:'Customer', phone:'ဖုန်း', device:'စက်ပစ္စည်း', receivedBy:'လက်ခံသူ', technician:'ပြင်မည့်သူ', issue:'ချို့ယွင်းချက်', date:'လက်ခံရက်စွဲ', quote:'ပြင်ဆင်ခကျသင့်ငွေ', parts:'အပိုပစ္စည်းကုန်ကျစရိတ်' };
 
   function exitEdit() {
     editingId = null;
@@ -859,7 +876,9 @@
     document.getElementById('fQuote').value = d.quote || '';
     document.getElementById('fParts').value = d.parts || '';
     document.getElementById('fParts').closest('.field').style.display = canSeeMoney() ? '' : 'none';
-    document.getElementById('formTitle').textContent = 'ပစ္စည်းအချက်အလက် ပြင်ဆင်ခြင်း — ' + (d.voucher || '') + (isAccountant() ? ' (ခန့်မှန်းခ / အပိုပစ္စည်းစရိတ်သာ ပြင်ခွင့်)' : '');
+    document.getElementById('fInspectWrap').style.display = (isFeeStatus(d) && canSeeMoney()) ? '' : 'none';
+    document.getElementById('fInspect').value = d.inspectFee != null ? d.inspectFee : '';
+    document.getElementById('formTitle').textContent = 'ပစ္စည်းအချက်အလက် ပြင်ဆင်ခြင်း — ' + (d.voucher || '') + (isAccountant() ? ' (ပြင်ဆင်ခ / အပိုပစ္စည်းစရိတ်သာ ပြင်ခွင့်)' : '');
     saveBtn.textContent = 'ပြင်ပြီးသိမ်းမည်';
     updateEditorBar();
     formPanel.classList.add('open');
@@ -887,6 +906,8 @@
     document.getElementById('fIssue').value = '';
     document.getElementById('fQuote').value = '';
     document.getElementById('fParts').value = '';
+    document.getElementById('fInspect').value = '';
+    document.getElementById('fInspectWrap').style.display = 'none';
     document.getElementById('fDate').valueAsDate = new Date();
   }
 
@@ -914,18 +935,19 @@
         quote: Number(document.getElementById('fQuote').value) || 0
       };
       if (isOwner()) nv.parts = Number(document.getElementById('fParts').value) || 0;
+      if (isFeeStatus(old) && canSeeMoney()) nv.inspectFee = Number(document.getElementById('fInspect').value) || 0;
       const changes = [];
       for (const k in nv) {
-        const a = (k === 'quote' || k === 'parts') ? (old[k] || 0) : (old[k] == null ? '' : old[k]);
+        const a = (k === 'quote' || k === 'parts' || k === 'inspectFee') ? (old[k] || 0) : (old[k] == null ? '' : old[k]);
         if (String(a) !== String(nv[k])) changes.push({ key: k, f: EDIT_LABELS[k], from: a, to: nv[k] });
       }
       // စာရင်းကိုင် — နှစ်ကွက်လုံးမှာ ကိန်းဂဏန်း (0 အပါအဝင်) ဖြည့်ထားမှ "ပြင်ဆင်နေဆဲ" ပြောင်း + ပြင်မည် ပိတ်
       const qRaw = document.getElementById('fQuote').value.trim();
       const pRaw = document.getElementById('fParts').value.trim();
       const isNum = (v) => v !== '' && /^[0-9]+(\.[0-9]+)?$/.test(v);
-      const acctComplete = isAccountant() && isNum(qRaw) && isNum(pRaw);
+      const acctComplete = isAccountant() && !isFeeStatus(old) && isNum(qRaw) && isNum(pRaw);
       if (!changes.length && !acctComplete) {
-        if (isAccountant()) alert('ခန့်မှန်းပြင်ဆင်ခ နဲ့ အပိုပစ္စည်းကုန်ကျစရိတ် နှစ်ကွက်လုံးမှာ ကိန်းဂဏန်း (0 ကစပြီး) ဖြည့်မှ ပြင်ဆင်နေဆဲ သို့ ပြောင်းပါမယ်');
+        if (isAccountant() && !isFeeStatus(old)) alert('ပြင်ဆင်ခကျသင့်ငွေ နဲ့ အပိုပစ္စည်းကုန်ကျစရိတ် နှစ်ကွက်လုံးမှာ ကိန်းဂဏန်း (0 ကစပြီး) ဖြည့်မှ ပြင်ဆင်နေဆဲ သို့ ပြောင်းပါမယ်');
         exitEdit(); clearForm(); formPanel.classList.remove('open'); return;
       }
       saveBtn.disabled = true;
@@ -1012,7 +1034,8 @@
       }).join(' · ');
       return `<div class="row">${who} — ✏️ ${txt} ${t}</div>`;
     }
-    return `<div class="row">${who} — ${l.from ? STATUS_LABEL[l.from] + ' → ' : ''}${STATUS_LABEL[l.to]} ${t}</div>`;
+    const extra = (l.note ? ` — <i>${escapeHtml(l.note)}</i>` : '') + ((l.fee != null && canSeeMoney()) ? ` — စစ်ဆေးခ ${fmt(l.fee)}` : '');
+    return `<div class="row">${who} — ${l.from ? STATUS_LABEL[l.from] + ' → ' : ''}${STATUS_LABEL[l.to]}${extra} ${t}</div>`;
   }
 
   function waitingText(d) {
@@ -1117,12 +1140,18 @@
             ${d.receivedBy ? `<span>လက်ခံသူ <b>${escapeHtml(d.receivedBy)}</b></span>` : ''}
             ${d.technician ? `<span>ပြင်မည့်သူ <b>${escapeHtml(d.technician)}</b></span>` : ''}
           </div>
-          ${canSeeMoney() ? `
+          ${canSeeMoney() ? (isFeeStatus(d) ? `
+          <div class="card-meta">
+            <span>စစ်ဆေးခ- <b>${fmt(inspectFeeOf(d))}</b></span>
+            <span>အပိုပစ္စည်း- <b>${fmt(d.parts)}</b></span>
+            <span>အမြတ်- <b>${fmt(inspectFeeOf(d) - (d.parts || 0))}</b></span>
+          </div>` : `
           <div class="card-meta">
             <span>ပြင်ဆင်ခ- <b>${fmt(d.quote)}</b></span>
             <span>အပိုပစ္စည်း- <b>${fmt(d.parts)}</b></span>
             <span>အမြတ်- <b>${fmt(d.quote - d.parts)}</b></span>
-          </div>` : ''}
+          </div>`) : ''}
+          ${(d.status === 'unrepairable' && d.unrepairReason) ? `<div class="card-reason">📝 မပြင်နိုင်ရတဲ့အကြောင်း- <b>${escapeHtml(d.unrepairReason)}</b></div>` : ''}
           ${lastLog ? `<div class="card-lastchange">နောက်ဆုံးပြောင်း- <b>${escapeHtml(lastLog.by)}${lastLog.byRole ? ' (' + roleOf(lastLog.byRole) + ')' : ''}</b> က ${lastLog.type === 'edit' ? 'အချက်အလက် ပြင်ခဲ့' : '"' + STATUS_LABEL[lastLog.to] + '" သို့ ပြောင်းခဲ့'} (${fmtTime(lastLog.at)})</div>` : ''}
           <div class="card-actions">
             <select data-id="${d.id}" class="statusSelect" ${isLockedFor(d) ? 'disabled' : ''}>
@@ -1156,6 +1185,25 @@
         const now = new Date().toISOString();
         const logEntry = { from: dev.status, to: newStatus, by: currentUser.name || currentUser.email, byRole: titleOf(currentUser), at: now };
         const upd = { status: newStatus, log: firebase.firestore.FieldValue.arrayUnion(logEntry) };
+        if (FEE_STATUSES.includes(newStatus)) {
+          // ၁) မပြင်နိုင်ရတဲ့ အကြောင်းရင်း — ဝန်ထမ်းအားလုံး မဖြစ်မနေ ရေးရ
+          const why = prompt('ဘာကြောင့် မပြင်နိုင် / မပြင်ဖြစ်တာလဲ? (မှတ်ချက် မဖြစ်မနေ ရေးပါ)', dev.unrepairReason || '');
+          if (why === null) { render(); return; }
+          if (!why.trim()) { alert('မှတ်ချက် မရေးရသေးပါ — အကြောင်းရင်း ရေးမှ ပြောင်းလို့ရပါမယ်'); render(); return; }
+          upd.unrepairReason = why.trim();
+          logEntry.note = why.trim();
+          // ၂) စစ်ဆေးခ — ပိုင်ရှင်/စာရင်းကိုင်သာ ထည့်ခွင့်
+          if (canEditRecord()) {
+            const def = dev.inspectFee != null && dev.inspectFee !== '' ? dev.inspectFee : lastInspectFee();
+            const p = prompt('စစ်ဆေးခ (Ks) ဘယ်လောက်ယူမလဲ? (ဂဏန်းသာ၊ မယူရင် 0)', def);
+            if (p === null) { render(); return; }
+            const v = String(p).replace(/[,\s]/g, '');
+            if (!/^[0-9]+(\.[0-9]+)?$/.test(v)) { alert('ကိန်းဂဏန်းသာ ရိုက်ပါ'); render(); return; }
+            upd.inspectFee = Number(v);
+            rememberInspectFee(v);
+            logEntry.fee = Number(v);
+          }
+        }
         if (newStatus === 'waiting_parts') {
           const p = prompt('ဘာအပိုပစ္စည်း စောင့်နေတာလဲ? (မရေးလည်းရပါတယ်)', dev.partsNeeded || '');
           upd.partsNeeded = p ? p.trim() : '';
@@ -1286,15 +1334,16 @@
     row('Customer', d.customer || '-');
     row('ဖုန်း', d.phone || '-');
     row('စက်ပစ္စည်း', d.device || '-');
+    row('အခြေအနေ', receiptStatus(d), true);
     hr();
     setFont(700); ctx.textAlign = 'left'; ctx.fillText('ချို့ယွင်းချက်:', PAD, y); y += LH;
     setFont(500);
     wrapText(ctx, d.issue || '-', W - PAD * 2).forEach(l => { ctx.fillText(l, PAD, y); y += LH; });
     hr();
-    row('ခန့်မှန်းကျသင့်ငွေ', String(fmt(d.quote)), true, 28);
+    row('ပြင်ဆင်ခကျသင့်ငွေ', String(fmt(d.quote || 0)), true, 28);
     hr();
     setFont(400, 20); ctx.textAlign = 'center';
-    wrapText(ctx, 'ပစ္စည်းယူချိန် ဒီဘောင်ချာကို ယူဆောင်လာပေးပါ', W - PAD * 2).forEach(l => { ctx.fillText(l, W / 2, y); y += 30; });
+    footerText().split('\n').forEach(par => wrapText(ctx, par, W - PAD * 2).forEach(l => { ctx.fillText(l, W / 2, y); y += 30; }));
     y += 6;
     setFont(400, 20); ctx.textAlign = 'right'; ctx.fillText(fmtTime(d.createdAt || d.date), W - PAD, y); y += 30;
     y += 6;
@@ -1354,12 +1403,14 @@
     document.getElementById('rAddr').textContent = shopInfo.address || '';
     document.getElementById('rShopPhone').textContent = shopInfo.phone ? 'ဖုန်း: ' + shopInfo.phone : '';
     document.getElementById('rDate').textContent = fmtTime(d.createdAt || d.date);
+    document.getElementById('rFoot').textContent = footerText();
     document.getElementById('rVoucher').textContent = d.voucher || '-';
     document.getElementById('rCustomer').textContent = d.customer || '-';
     document.getElementById('rPhone').textContent = d.phone || '-';
     document.getElementById('rDevice').textContent = d.device || '-';
     document.getElementById('rIssue').textContent = d.issue || '-';
-    document.getElementById('rQuote').textContent = fmt(d.quote);
+    document.getElementById('rQuote').textContent = fmt(d.quote || 0);
+    document.getElementById('rStatus').textContent = receiptStatus(d);
     document.getElementById('receiptModal').classList.add('open');
   }
 
@@ -1392,8 +1443,9 @@
   function renderStats() {
     const list = monthStrict();
     const doneDevices = list.filter(d => d.status === 'done');
-    const income = doneDevices.reduce((s, d) => s + (d.quote || 0), 0);
-    const expense = doneDevices.reduce((s, d) => s + (d.parts || 0), 0);
+    const declinedDevices = list.filter(d => isFeeStatus(d));
+    const income = doneDevices.reduce((s, d) => s + (d.quote || 0), 0) + declinedDevices.reduce((s, d) => s + inspectFeeOf(d), 0);
+    const expense = doneDevices.concat(declinedDevices).reduce((s, d) => s + (d.parts || 0), 0);
     document.getElementById('statTotal').textContent = list.length;
     document.getElementById('statIncome').textContent = fmt(income);
     document.getElementById('statExpense').textContent = fmt(expense);
