@@ -11,6 +11,8 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Service Tracker">
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Noto+Sans+Myanmar:wght@400;500;700&display=swap" rel="stylesheet">
@@ -323,7 +325,7 @@
       <div class="field"><label>စက်ပစ္စည်း / မော်ဒယ်</label><input id="fDevice" type="text" placeholder="Samsung A54, TV LG..."></div>
       <div class="field"><label>လက်ခံရက်စွဲ</label><input id="fDate" type="date"></div>
       <div class="field"><label>လက်ခံသူ</label><input id="fReceivedBy" type="text" placeholder="မြမြ"></div>
-      <div class="field"><label>ပြင်ဆင်မည့်သူ (assign)</label><input id="fTechnician" type="text" placeholder="အောင်အောင်"></div>
+      <div class="field" id="fTechWrap" style="display:none;"><label>ပြင်ဆင်မည့်သူ (assign)</label><input id="fTechnician" type="text" placeholder="အောင်အောင်"></div>
       <div class="field full"><label>ချို့ယွင်းချက် / ပြင်ဆင်ရန်</label><textarea id="fIssue" placeholder="ဖန်သားကွဲ၊ ဘက်ထရီအားနည်း..."></textarea></div>
       <div class="field"><label>ပြင်ဆင်ခ ကျသင့်ငွေ (Ks)</label><input id="fQuote" type="number" min="0" placeholder="0"></div>
       <div class="field"><label>အပိုပစ္စည်း ကုန်ကျစရိတ် (Ks)</label><input id="fParts" type="number" min="0" placeholder="0"></div>
@@ -615,14 +617,17 @@
       if (!doc.exists) {
         await handleUnregistered(fbUser);
         return;
-      } else if (!doc.data().name && fbUser.displayName) {
-        await db.collection('users').doc(email).update({ name: fbUser.displayName });
       }
-      const finalDoc = await db.collection('users').doc(email).get();
-      currentUser = { email, ...finalDoc.data() };
+      let udata = doc.data();
+      if (!udata.name && fbUser.displayName) {
+        // နာမည်မရှိသေးရင် Google နာမည်ကို ထည့် (ထပ်ဖတ်စရာမလို — local မှာပဲ ပေါင်း)
+        udata = { ...udata, name: fbUser.displayName };
+        db.collection('users').doc(email).update({ name: fbUser.displayName }).catch(() => {});
+      }
+      currentUser = { email, ...udata };
       loginOverlay.style.display = 'none';
+      startListeners();   // data ဆွဲတာကို UI မဆွဲခင် ချက်ချင်းစ
       afterLogin();
-      startListeners();
     } catch (e) {
       loginErr.textContent = 'အမှား: ' + e.message;
       googleBtn.disabled = false;
@@ -846,6 +851,7 @@
 
   function exitEdit() {
     editingId = null;
+    document.getElementById('fTechWrap').style.display = 'none';
     setFieldsLocked(false);
     document.getElementById('formTitle').textContent = 'ပစ္စည်းအသစ် လက်ခံခြင်း';
     saveBtn.textContent = 'သိမ်းမည်';
@@ -871,6 +877,7 @@
     document.getElementById('fDate').value = d.date || '';
     document.getElementById('fReceivedBy').value = d.receivedBy || '';
     document.getElementById('fTechnician').value = d.technician || '';
+    document.getElementById('fTechWrap').style.display = '';   // ပြင်တဲ့အခါမှ ပြ
     setFieldsLocked(false);
     if (isAccountant()) setFieldsLocked(true);
     document.getElementById('fIssue').value = d.issue || '';
