@@ -190,6 +190,8 @@
   .dayctl input { flex:1; min-width:0; background:var(--surface-2); border:1px solid var(--line); color:var(--text); border-radius:7px; padding:9px 10px; font-family:var(--font-body); font-size:0.92rem; }
   .dayctl button { padding:8px 14px; }
   .dnote { font-size:0.76rem; color:var(--muted); margin:6px 0 4px; line-height:1.6; }
+  .homedash { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; margin-bottom: 14px; }
+  .hd-title { font-family: var(--font-head); font-weight: 700; font-size: 1rem; color: var(--copper); margin-bottom: 10px; }
 </style>
 </head>
 <body>
@@ -248,13 +250,6 @@
         <p id="hdrDesc">Electronics Service — အဝင်အထွက် / ဝင်ငွေထွက်ငွေ / အခြေအနေ</p>
       </div>
     </div>
-    <div class="searchrow" id="monthRow" style="margin:10px 0 0;">
-      <select id="monthSel" style="max-width:none; flex:1;"></select>
-    </div>
-    <div class="searchrow" id="searchRow" style="margin:10px 0 0;">
-    <input id="searchBox" type="search" placeholder="ဘောင်ချာ / customer / ဖုန်း / စက် ရှာရန်...">
-    <select id="sortSel"><option value="new">အသစ်ဆုံးအရင်</option><option value="old">အဟောင်းဆုံးအရင်</option></select>
-  </div>
     <div class="synctag offline" id="syncTag"><span class="dot"></span><span id="syncText">ချိတ်ဆက်နေသည်...</span></div>
   </div>
   <div class="menu-wrap" id="whoamiBox" style="display:none;">
@@ -262,7 +257,7 @@
     <div class="menu-pop" id="menuPop">
       <div class="who"><b id="menuName"></b><span id="menuRole"></span></div>
       <button id="renameBtn" style="display:none;">✏️ နာမည်ပြင်မည်</button>
-      <button id="dashBtn" style="display:none;">📊 Dashboard</button>
+      <button id="dashBtn" style="display:none;">📊 လစဉ် Dashboard</button>
       <button id="shopSettingsBtn" style="display:none;">🏪 ဆိုင်အချက်အလက်</button>
       <button id="manageStaffBtn" style="display:none;">👥 ဝန်ထမ်းစီမံမည်</button>
       <button id="adminBtn" style="display:none;">🛡 Admin — ဆိုင်များ</button>
@@ -273,22 +268,7 @@
 
 <main>
   <div class="panel" id="dashPanel">
-    <h2>📊 Dashboard</h2>
-  <div style="font-size:0.85rem; color:var(--copper); margin:2px 0 8px; font-weight:600;">📆 နေ့စဉ် Dashboard</div>
-  <div class="dayctl">
-    <button class="ghost" id="dayPrev" aria-label="ရှေ့ရက်">‹</button>
-    <input type="date" id="dayPick">
-    <button class="ghost" id="dayNext" aria-label="နောက်ရက်">›</button>
-    <button class="ghost" id="dayToday">ယနေ့</button>
-  </div>
-  <div class="stats" style="margin-bottom:6px;">
-    <div class="stat"><div class="label">စက်ပစ္စည်း (လက်ခံ)</div><div class="value" id="dayTotal">0</div></div>
-    <div class="stat income"><div class="label">ဝင်ငွေ</div><div class="value" id="dayIncome">0</div></div>
-    <div class="stat expense"><div class="label">အပိုပစ္စည်း</div><div class="value" id="dayExpense">0</div></div>
-    <div class="stat profit"><div class="label">အမြတ်</div><div class="value" id="dayProfit">0</div></div>
-  </div>
-  <div class="dnote" id="dayNote"></div>
-  <hr style="border:none;border-top:1px solid var(--line);margin:14px 0;">
+    <h2>📊 လစဉ် Dashboard</h2>
   <div id="statMonthLbl" style="font-size:0.85rem; color:var(--copper); margin:2px 0 8px; font-weight:600;"></div>
   <div class="stats" id="statsBar" style="display:none; margin-bottom:12px;">
     <div class="stat"><div class="label">စက်ပစ္စည်း (ဒီလ)</div><div class="value" id="statTotal">0</div></div>
@@ -356,19 +336,24 @@
 
   <div id="licenseBanner" style="display:none;margin:0 0 12px;padding:10px 12px;border-radius:8px;font-size:0.85rem;line-height:1.5;"></div>
 
-  <div class="toolbar" id="toolbarBox" style="display:none;">
-    <div class="tabs" id="tabs">
-      <button class="tab active" data-filter="all">အားလုံး</button>
-      <button class="tab" data-filter="received">လက်ခံရရှိ</button>
-      <button class="tab" data-filter="checking">စစ်ဆေးနေဆဲ</button>
-      <button class="tab" data-filter="repairing">ပြင်နေဆဲ</button>
-      <button class="tab" data-filter="waiting_parts">အပိုပစ္စည်းစောင့်</button>
-      <button class="tab" data-filter="ready">ပြင်ပြီး-မယူသေး</button>
-      <button class="tab" data-filter="unrepairable">မပြင်နိုင်</button>
-      <button class="tab" data-filter="done">ပြီးစီး</button>
+  <section class="homedash" id="homeDash" style="display:none;">
+    <div class="hd-title">📆 နေ့စဉ် Dashboard</div>
+    <div class="dayctl">
+      <button class="ghost" id="dayPrev" aria-label="ရှေ့ရက်">‹</button>
+      <input type="date" id="dayPick">
+      <button class="ghost" id="dayNext" aria-label="နောက်ရက်">›</button>
+      <button class="ghost" id="dayToday">ယနေ့</button>
     </div>
-    <button class="primary" id="toggleForm">+ ပစ္စည်းအသစ် ထည့်မည်</button>
-  </div>
+    <div class="stats" style="margin-bottom:6px;">
+      <div class="stat"><div class="label">စက်ပစ္စည်း (လက်ခံ)</div><div class="value" id="dayTotal">0</div></div>
+      <div class="stat income" id="dayIncomeT"><div class="label">ဝင်ငွေ</div><div class="value" id="dayIncome">0</div></div>
+      <div class="stat expense" id="dayExpenseT"><div class="label">အပိုပစ္စည်း</div><div class="value" id="dayExpense">0</div></div>
+      <div class="stat profit" id="dayProfitT"><div class="label">အမြတ်</div><div class="value" id="dayProfit">0</div></div>
+    </div>
+    <div class="dnote" id="dayNote"></div>
+  </section>
+
+  <div id="addBar" style="display:none;margin:0 0 14px;"><button class="primary" id="toggleForm" style="width:100%;">+ ပစ္စည်းအသစ် ထည့်မည်</button></div>
 
   <div class="panel" id="formPanel">
     <h2 id="formTitle">ပစ္စည်းအသစ် လက်ခံခြင်း</h2>
@@ -389,6 +374,24 @@
     <div class="actions">
       <button class="primary" id="saveBtn">သိမ်းမည်</button>
       <button class="ghost" id="cancelBtn">မလုပ်တော့ပါ</button>
+    </div>
+  </div>
+
+  <div class="toolbar" id="toolbarBox" style="display:none;flex-direction:column;align-items:stretch;gap:10px;">
+    <div class="searchrow" id="monthRow" style="margin:0;"><select id="monthSel" style="max-width:none; flex:1;"></select></div>
+    <div class="searchrow" id="searchRow" style="margin:0;">
+      <input id="searchBox" type="search" placeholder="ဘောင်ချာ / customer / ဖုန်း / စက် ရှာရန်...">
+      <select id="sortSel"><option value="new">အသစ်ဆုံးအရင်</option><option value="old">အဟောင်းဆုံးအရင်</option></select>
+    </div>
+    <div class="tabs" id="tabs">
+      <button class="tab active" data-filter="all">အားလုံး</button>
+      <button class="tab" data-filter="received">လက်ခံရရှိ</button>
+      <button class="tab" data-filter="checking">စစ်ဆေးနေဆဲ</button>
+      <button class="tab" data-filter="repairing">ပြင်နေဆဲ</button>
+      <button class="tab" data-filter="waiting_parts">အပိုပစ္စည်းစောင့်</button>
+      <button class="tab" data-filter="ready">ပြင်ပြီး-မယူသေး</button>
+      <button class="tab" data-filter="unrepairable">မပြင်နိုင်</button>
+      <button class="tab" data-filter="done">ပြီးစီး</button>
     </div>
   </div>
 
@@ -746,6 +749,8 @@
       document.getElementById('toolbarBox').style.display = 'none';
       document.getElementById('searchRow').style.display = 'none';
       document.getElementById('monthRow').style.display = 'none';
+      document.getElementById('homeDash').style.display = 'none';
+      document.getElementById('addBar').style.display = 'none';
       document.getElementById('list').innerHTML = '';
       loginOverlay.style.display = 'flex';
       showLoginState('main');
@@ -793,6 +798,8 @@
     document.getElementById('toolbarBox').style.display = 'flex';
     document.getElementById('searchRow').style.display = 'flex';
     document.getElementById('monthRow').style.display = 'flex';
+    document.getElementById('homeDash').style.display = 'block';
+    document.getElementById('addBar').style.display = 'block';
     document.getElementById('menuName').textContent = currentUser.name || currentUser.email;
     document.getElementById('menuRole').textContent = titleOf(currentUser) + ' · ' + currentUser.email;
     applyShopHeader(); updateEditorBar(); renderLicenseBanner();
@@ -906,8 +913,6 @@
   const dashPanel = document.getElementById('dashPanel');
   document.getElementById('dashBtn').addEventListener('click', () => {
     dashPanel.classList.add('open');
-    document.getElementById('dayPick').value = todayKey();
-    renderDaily();
     window.scrollTo({ top: 0, behavior: 'smooth' });
   });
   document.getElementById('closeDashBtn').addEventListener('click', () => dashPanel.classList.remove('open'));
@@ -1782,11 +1787,13 @@
     const closed = devices.filter(d => (d.status === 'done' || isFeeStatus(d)) && closedDayOf(d) === day);
     const income = closed.reduce((s, d) => s + (isFeeStatus(d) ? inspectFeeOf(d) : (d.quote || 0)), 0);
     const expense = closed.reduce((s, d) => s + (d.parts || 0), 0);
+    const own = isOwner();
+    ['dayIncomeT', 'dayExpenseT', 'dayProfitT'].forEach(id => { document.getElementById(id).style.display = own ? '' : 'none'; });
     document.getElementById('dayTotal').textContent = rec.length;
     document.getElementById('dayIncome').textContent = fmt(income);
     document.getElementById('dayExpense').textContent = fmt(expense);
     document.getElementById('dayProfit').textContent = fmt(income - expense);
-    document.getElementById('dayNote').textContent = 'ဒီနေ့ လက်ခံ ' + rec.length + ' ခု · ပြီးစီး/စစ်ဆေးခယူပြီး ပိတ်ခဲ့ ' + closed.length + ' ခု။ ဝင်ငွေ၊ အပိုပစ္စည်း၊ အမြတ်ကို ပြီးစီးခဲ့တဲ့ရက်အတိုင်း တွက်ထားပါတယ်။';
+    document.getElementById('dayNote').textContent = 'ဒီနေ့ လက်ခံ ' + rec.length + ' ခု · ပြီးစီး/စစ်ဆေးခယူပြီး ပိတ်ခဲ့ ' + closed.length + ' ခု' + (own ? '။ ဝင်ငွေ၊ အပိုပစ္စည်း၊ အမြတ်ကို ပြီးစီးခဲ့တဲ့ရက်အတိုင်း တွက်ထားပါတယ်။' : '');
   }
   function shiftDay(n) {
     const el = document.getElementById('dayPick');
