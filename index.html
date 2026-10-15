@@ -198,12 +198,21 @@
       <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3c-1.6 4.7-6.1 8-11.3 8-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.1 8 3l6-6C34.5 5.5 29.6 3.5 24 3.5 12.7 3.5 3.5 12.7 3.5 24S12.7 44.5 24 44.5 44.5 35.3 44.5 24c0-1.2-.1-2.4-.3-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.6 15.9 18.9 13 24 13c3.1 0 5.8 1.1 8 3l6-6C34.5 5.5 29.6 3.5 24 3.5c-7.5 0-14 4.2-17.3 10.3z"/><path fill="#4CAF50" d="M24 44.5c5.5 0 10.4-1.9 13.9-5.1l-6.4-5.4c-2 1.4-4.6 2.3-7.5 2.3-5.2 0-9.6-3.3-11.2-7.9l-6.5 5C9.9 40.2 16.4 44.5 24 44.5z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.3-2.2 4.2-4.1 5.6l6.4 5.4C41.5 35.6 44.5 30.2 44.5 24c0-1.2-.1-2.4-.3-3.5z"/></svg>
       <span id="googleBtnText">ချိတ်ဆက်နေသည်...</span>
     </button>
+    <div id="roleChoice" style="display:none;">
+      <div class="btnrow" style="flex-direction:column;gap:10px;">
+        <button class="primary" id="chooseOwnerBtn">🏪 ဆိုင်ပိုင်ရှင်အဖြစ် လျှောက်မည်</button>
+        <button class="ghost" id="chooseStaffBtn">👤 ဝန်ထမ်းအဖြစ် လျှောက်မည် (ဆိုင်ကုဒ်လိုမယ်)</button>
+        <button class="ghost" id="choiceLogoutBtn">ထွက်မည်</button>
+      </div>
+    </div>
     <div id="regBox" style="display:none; text-align:left;">
       <div class="reg-field"><label>နာမည် *</label><input id="regName" type="text" placeholder="အောင်အောင်"></div>
       <div class="reg-field"><label>ဖုန်းနံပါတ် *</label><input id="regPhone" type="tel" placeholder="09..."></div>
-      <div class="reg-field"><label>ရာထူး *</label><input id="regPosition" type="text" list="positionList" placeholder="စက်ပြင်သမား"></div>
+      <div class="reg-field" id="regShopNameWrap"><label>ဆိုင်အမည် *</label><input id="regShopName" type="text" placeholder="ဆိုင်နာမည်"></div>
+      <div class="reg-field" id="regShopCodeWrap"><label>ဆိုင်ကုဒ် * (ပိုင်ရှင်ဆီက ယူပါ)</label><input id="regShopCode" type="text" placeholder="ABC123" style="text-transform:uppercase;"></div>
+      <div class="reg-field" id="regPositionWrap"><label>ရာထူး *</label><input id="regPosition" type="text" list="positionList" placeholder="စက်ပြင်သမား"></div>
       <div class="reg-field"><label>Gmail</label><input id="regEmail" type="email" disabled></div>
-      <div class="btnrow"><button class="primary" id="regSubmitBtn">လျှောက်ထားမည်</button><button class="ghost" id="regLogoutBtn">ထွက်မည်</button></div>
+      <div class="btnrow"><button class="primary" id="regSubmitBtn">လျှောက်ထားမည်</button><button class="ghost" id="regBackBtn">နောက်သို့</button><button class="ghost" id="regLogoutBtn">ထွက်မည်</button></div>
     </div>
     <div id="pendingBox" style="display:none;">
       <div style="font-size:2rem;">⏳</div>
@@ -243,6 +252,7 @@
       <button id="dashBtn" style="display:none;">📊 Dashboard</button>
       <button id="shopSettingsBtn" style="display:none;">🏪 ဆိုင်အချက်အလက်</button>
       <button id="manageStaffBtn" style="display:none;">👥 ဝန်ထမ်းစီမံမည်</button>
+      <button id="adminBtn" style="display:none;">🛡 Admin — ဆိုင်များ</button>
       <button id="logoutBtn" class="danger">⎋ ထွက်မည်</button>
     </div>
   </div>
@@ -264,6 +274,7 @@
   <div class="panel" id="shopPanel">
     <h2>ဆိုင်အချက်အလက် (ဘောင်ချာပေါ်မှာ ပေါ်မယ်)</h2>
     <div class="field-grid">
+      <div class="field full" style="font-size:0.84rem;color:var(--muted);">ဆိုင်ကုဒ်: <b id="shopCodeLbl" style="color:var(--copper);letter-spacing:1px;">-</b> (ဝန်ထမ်းတွေ လျှောက်တဲ့အခါ သုံးမယ့်ကုဒ်)</div>
       <div class="field full"><label>ဆိုင်အမည်</label><input id="shopName" type="text" placeholder="ဆိုင်နာမည်"></div>
       <div class="field full"><label>Description (ဆိုင်ရဲ့ လုပ်ငန်းအကြောင်း)</label><input id="shopDesc" type="text" placeholder="လျှပ်စစ်ပစ္စည်းအမျိုးမျိုး ပြုပြင်ရေး"></div>
       <div class="field full"><label>ဖုန်းနံပါတ်</label><input id="shopPhone" type="text" placeholder="09..."></div>
@@ -276,8 +287,23 @@
     </div>
   </div>
 
+  <div class="panel" id="adminPanel">
+    <h2>🛡 Admin — ဆိုင်များစီမံမှု</h2>
+    <div id="migrateBox" class="reqcard" style="display:none;">
+      <b>⚠️ ပထမဆုံး တစ်ကြိမ် လုပ်ရမယ်</b>
+      <span class="sm">ရှိပြီးသား ဘောင်ချာ၊ ဝန်ထမ်း၊ ဆိုင်အချက်အလက်တွေကို ဆိုင်တစ်ဆိုင် (ကုဒ် YHK) ထဲ ရွှေ့ပါမယ်။ တစ်ကြိမ်ပဲ လုပ်ပါ။</span>
+      <div class="ra"><button class="ok" id="migrateBtn">ဒေတာဟောင်း ရွှေ့မည်</button></div>
+      <span class="sm" id="migrateMsg"></span>
+    </div>
+    <div id="ownerReqBox" style="display:none;"><div style="font-size:0.82rem;color:var(--copper);margin-bottom:8px;">🏪 ဆိုင်ပိုင်ရှင် လျှောက်လွှာများ (ငွေလွှဲပြီးမှ လက်ခံပါ)</div><div id="ownerReqList"></div></div>
+    <div style="font-size:0.82rem;color:var(--muted);margin:10px 0 6px;">ဆိုင်များ</div>
+    <div id="shopList"></div>
+    <div class="actions"><button class="ghost" id="closeAdminBtn">ပိတ်မည်</button></div>
+  </div>
+
   <div class="panel" id="staffPanel">
     <h2>ဝန်ထမ်းစီမံမှု</h2>
+    <div style="font-size:0.82rem;color:var(--muted);margin-bottom:10px;">ဆိုင်ကုဒ်: <b id="staffShopCode" style="color:var(--copper);letter-spacing:1px;"></b> — ဝန်ထမ်းတွေ ကိုယ်တိုင်လျှောက်ရင် ဒီကုဒ်ကို ပေးပါ</div>
     <div id="reqBox" style="display:none;"><div style="font-size:0.82rem;color:var(--copper);margin-bottom:8px;">📝 လျှောက်လွှာများ (စစ်ဆေးရန်)</div><div id="reqList"></div></div>
     <div id="staffList"></div>
     <div class="field-grid" style="margin-top:14px;">
@@ -385,6 +411,10 @@
   };
   firebase.initializeApp(firebaseConfig);
   const db = firebase.firestore();
+  // Admin (ဆိုင်ရောင်းသူ) Gmail — ဆိုင်ပိုင်ရှင်လျှောက်လွှာ လက်ခံ၊ သက်တမ်းထိန်းသူ။ firestore.rules ထဲက email နဲ့ တူရမယ်
+  const ADMIN_EMAIL = 'yhkelectronics@gmail.com';
+  // ဝယ်သူ ပိုင်ရှင်လျှောက်ပြီး စောင့်နေတဲ့စာမျက်နှာမှာ ပြမယ့် ငွေလွှဲ/ဆက်သွယ်ရန် စာသား (လိုရင် ရေးပါ)
+  const ADMIN_CONTACT = '';
   const auth = firebase.auth();
   auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(() => {});
 
@@ -400,7 +430,20 @@
   let shopInfo = { name: '', desc: '', phone: '', address: '', footer: '' };
   const DEFAULT_FOOTER = 'ပစ္စည်းယူချိန် ဒီဘောင်ချာကို ယူဆောင်လာပေးပါ';
   const footerText = () => (shopInfo.footer && shopInfo.footer.trim()) ? shopInfo.footer.trim() : DEFAULT_FOOTER;
-  try { const c = JSON.parse(localStorage.getItem('shopInfo') || 'null'); if (c) shopInfo = { ...shopInfo, ...c }; } catch (e) {}
+  const shopCacheKey = () => 'shopInfo:' + ((currentUser && currentUser.shopId) || '');
+  const loadShopCache = () => { try { const c = JSON.parse(localStorage.getItem(shopCacheKey()) || 'null'); if (c) shopInfo = { ...shopInfo, ...c }; } catch (e) {} };
+  const isAdminUser = () => !!currentUser && currentUser.email === ADMIN_EMAIL;
+  let unsubs = [];
+  let adminListenerStarted = false;
+  let adminOwnerReqs = [], adminShops = [], adminShopsLoaded = false;
+  function stopListeners() {
+    unsubs.forEach(u => { try { u(); } catch (e) {} });
+    unsubs = [];
+    devicesListenerStarted = usersListenerStarted = settingsListenerStarted = licenseListenerStarted = adminListenerStarted = false;
+    devices = []; users = []; requests = []; adminOwnerReqs = []; adminShops = []; adminShopsLoaded = false;
+    license = null; licenseLoaded = false;
+    shopInfo = { name: '', desc: '', phone: '', address: '', footer: '' };
+  }
 
   const ROLE_LABEL = { owner: 'ပိုင်ရှင်', accountant: 'စာရင်းကိုင်', technician: 'စက်ပြင်', staff: 'အခြား ဝန်ထမ်း' };
   const ROLE_OPTIONS = [['technician','စက်ပြင်'],['staff','အခြား (သန့်ရှင်းရေး စသည်)'],['accountant','စာရင်းကိုင်']];
@@ -461,7 +504,7 @@
   }
   function renderLicenseBanner() {
     const el = document.getElementById('licenseBanner');
-    if (!currentUser || !licenseLoaded) { el.style.display = 'none'; return; }
+    if (!currentUser || !currentUser.shopId || !licenseLoaded) { el.style.display = 'none'; return; }
     if (!licenseOk()) {
       el.style.cssText = 'display:block;margin:0 0 12px;padding:10px 12px;border-radius:8px;font-size:0.85rem;line-height:1.5;background:#fdecea;color:#a12a22;border:1px solid #f3b8b3;';
       el.textContent = '⛔ App သက်တမ်းကုန်နေပါပြီ (သို့) License မရှိပါ — ကြည့်ရုံသာ ကြည့်လို့ရပါမယ်။ အသစ်ထည့်/ပြင်ဖို့ ဆက်သွယ်ပါ။';
@@ -488,49 +531,83 @@
   const regBox = document.getElementById('regBox');
   const pendingBox = document.getElementById('pendingBox');
   const loginHint = document.getElementById('loginHint');
+  const roleChoiceBox = document.getElementById('roleChoice');
+  let regMode = 'staff';
   function showLoginState(st) {
     googleBtn.style.display = st === 'main' ? '' : 'none';
     loginHint.style.display = st === 'main' ? '' : 'none';
+    roleChoiceBox.style.display = st === 'choice' ? 'block' : 'none';
     regBox.style.display = st === 'reg' ? 'block' : 'none';
     pendingBox.style.display = st === 'pending' ? 'block' : 'none';
     loginSub.style.display = st === 'pending' ? 'none' : '';
-    if (st === 'reg') loginSub.textContent = 'ဝန်ထမ်းအဖြစ် လျှောက်ထားရန် ဖြည့်ပါ — ပိုင်ရှင် စစ်ပြီး လက်ခံမှ ဝင်ခွင့်ရပါမယ်';
+    if (st === 'reg') {
+      const own = regMode === 'owner';
+      document.getElementById('regShopNameWrap').style.display = own ? '' : 'none';
+      document.getElementById('regShopCodeWrap').style.display = own ? 'none' : '';
+      document.getElementById('regPositionWrap').style.display = own ? 'none' : '';
+      loginSub.textContent = own ? 'ဆိုင်ပိုင်ရှင်အဖြစ် လျှောက်ထားရန် ဖြည့်ပါ — ငွေလွှဲပြီး Admin လက်ခံမှ ဝင်ခွင့်ရပါမယ်' : 'ဝန်ထမ်းအဖြစ် လျှောက်ထားရန် ဖြည့်ပါ — ပိုင်ရှင် စစ်ပြီး လက်ခံမှ ဝင်ခွင့်ရပါမယ်';
+    }
+    if (st === 'choice') loginSub.textContent = 'သင်က ဘယ်လိုသုံးမလဲ?';
     if (st === 'main') loginSub.textContent = 'Login ဝင်ရောက်ပါ';
   }
   async function handleUnregistered(fbUser) {
     const email = fbUser.email;
-    let req = null;
+    let oreq = null, sreq = null;
     try {
-      const r = await db.collection('staffRequests').doc(email).get();
-      if (r.exists) req = r.data();
+      const [o, r] = await Promise.all([db.collection('ownerRequests').doc(email).get(), db.collection('staffRequests').doc(email).get()]);
+      if (o.exists) oreq = o.data();
+      if (r.exists) sreq = r.data();
     } catch (e) {
-      loginErr.textContent = 'လျှောက်လွှာစနစ် မရသေးပါ (Firestore rules မှာ staffRequests ခွင့်ပြုပေးဖို့ လိုပါတယ်): ' + e.message;
+      loginErr.textContent = 'လျှောက်လွှာစနစ် မရသေးပါ (Firestore rules မှာ ခွင့်ပြုပေးဖို့ လိုပါတယ်): ' + e.message;
     }
     loginOverlay.style.display = 'flex';
-    if (req && req.status === 'pending') {
-      loginErr.textContent = '';
-      document.getElementById('pendingText').textContent = email + ' — ပိုင်ရှင် စစ်ဆေးပြီး လက်ခံမှ ဝင်ခွင့်ရပါမယ်။';
-      showLoginState('pending');
-      return;
-    }
-    if (req && req.status === 'rejected') loginErr.textContent = 'ပိုင်ရှင်က လက်မခံပါ။ အချက်အလက် ပြင်ဖြည့်ပြီး ပြန်လျှောက်နိုင်ပါတယ်။';
-    document.getElementById('regName').value = (req && req.name) || fbUser.displayName || '';
-    document.getElementById('regPhone').value = (req && req.phone) || '';
-    document.getElementById('regPosition').value = (req && req.position) || '';
     document.getElementById('regEmail').value = email;
-    showLoginState('reg');
+    document.getElementById('regName').value = (oreq && oreq.name) || (sreq && sreq.name) || fbUser.displayName || '';
+    document.getElementById('regPhone').value = (oreq && oreq.phone) || (sreq && sreq.phone) || '';
+    document.getElementById('regPosition').value = (sreq && sreq.position) || '';
+    document.getElementById('regShopName').value = (oreq && oreq.shopName) || '';
+    document.getElementById('regShopCode').value = (sreq && sreq.shopId) || '';
+    if (oreq && oreq.status === 'pending') {
+      loginErr.textContent = '';
+      document.getElementById('pendingText').textContent = email + ' — ဆိုင်ပိုင်ရှင် လျှောက်လွှာ ပို့ပြီးပါပြီ။ ငွေလွှဲပြီးကြောင်း Admin ကို အကြောင်းကြားပါ၊ Admin လက်ခံမှ ဝင်ခွင့်ရပါမယ်။' + (ADMIN_CONTACT ? ' ဆက်သွယ်ရန်: ' + ADMIN_CONTACT : '');
+      showLoginState('pending'); return;
+    }
+    if (sreq && sreq.status === 'pending') {
+      loginErr.textContent = '';
+      document.getElementById('pendingText').textContent = email + ' — ဆိုင်ကုဒ် ' + (sreq.shopId || '') + ' ရဲ့ ပိုင်ရှင် စစ်ဆေးပြီး လက်ခံမှ ဝင်ခွင့်ရပါမယ်။';
+      showLoginState('pending'); return;
+    }
+    if (oreq && oreq.status === 'rejected') { loginErr.textContent = 'Admin က လက်မခံပါ။ ဆက်သွယ်ပါ (သို့) ပြန်လျှောက်နိုင်ပါတယ်။'; regMode = 'owner'; showLoginState('reg'); return; }
+    if (sreq && sreq.status === 'rejected') { loginErr.textContent = 'ပိုင်ရှင်က လက်မခံပါ။ အချက်အလက် ပြင်ဖြည့်ပြီး ပြန်လျှောက်နိုင်ပါတယ်။'; regMode = 'staff'; showLoginState('reg'); return; }
+    showLoginState('choice');
   }
+  document.getElementById('chooseOwnerBtn').addEventListener('click', () => { regMode = 'owner'; loginErr.textContent = ''; showLoginState('reg'); });
+  document.getElementById('chooseStaffBtn').addEventListener('click', () => { regMode = 'staff'; loginErr.textContent = ''; showLoginState('reg'); });
+  document.getElementById('choiceLogoutBtn').addEventListener('click', () => auth.signOut());
+  document.getElementById('regBackBtn').addEventListener('click', () => { loginErr.textContent = ''; showLoginState('choice'); });
   document.getElementById('regSubmitBtn').addEventListener('click', async () => {
     const fbUser = auth.currentUser;
     if (!fbUser) return;
     const name = document.getElementById('regName').value.trim();
     const phone = document.getElementById('regPhone').value.trim();
-    const position = document.getElementById('regPosition').value.trim();
-    if (!name || !phone || !position) { loginErr.textContent = 'နာမည်၊ ဖုန်းနံပါတ်၊ ရာထူး အားလုံး ဖြည့်ပေးပါ'; return; }
     const btn = document.getElementById('regSubmitBtn');
-    btn.disabled = true; loginErr.textContent = '';
+    loginErr.textContent = '';
     try {
-      await db.collection('staffRequests').doc(fbUser.email).set({ email: fbUser.email, name, phone, position, status: 'pending', requestedAt: new Date().toISOString() });
+      if (regMode === 'owner') {
+        const shopName = document.getElementById('regShopName').value.trim();
+        if (!name || !phone || !shopName) { loginErr.textContent = 'နာမည်၊ ဖုန်းနံပါတ်၊ ဆိုင်အမည် အားလုံး ဖြည့်ပေးပါ'; return; }
+        btn.disabled = true;
+        await db.collection('ownerRequests').doc(fbUser.email).set({ email: fbUser.email, name, phone, shopName, status: 'pending', requestedAt: new Date().toISOString() });
+      } else {
+        const position = document.getElementById('regPosition').value.trim();
+        const code = document.getElementById('regShopCode').value.trim().toUpperCase();
+        if (!name || !phone || !position || !code) { loginErr.textContent = 'နာမည်၊ ဖုန်းနံပါတ်၊ ဆိုင်ကုဒ်၊ ရာထူး အားလုံး ဖြည့်ပေးပါ'; return; }
+        btn.disabled = true;
+        let ok = false;
+        try { ok = (await db.collection('shopCodes').doc(code).get()).exists; } catch (e) { ok = false; }
+        if (!ok) { loginErr.textContent = 'ဆိုင်ကုဒ် မှားနေပါတယ် — ပိုင်ရှင်ဆီက ကုဒ်ကို ပြန်စစ်ပါ'; btn.disabled = false; return; }
+        await db.collection('staffRequests').doc(fbUser.email).set({ email: fbUser.email, name, phone, position, shopId: code, status: 'pending', requestedAt: new Date().toISOString() });
+      }
       await handleUnregistered(fbUser);
     } catch (e) { loginErr.textContent = 'ပို့လို့မရပါ: ' + e.message; }
     btn.disabled = false;
@@ -597,7 +674,10 @@
 
   auth.onAuthStateChanged(async (fbUser) => {
     if (!fbUser) {
+      stopListeners();
       currentUser = null;
+      applyShopHeader();
+      document.getElementById('adminPanel').classList.remove('open');
       document.getElementById('whoamiBox').style.display = 'none';
         document.getElementById('statsBar').style.display = 'none';
       document.getElementById('toolbarBox').style.display = 'none';
@@ -614,17 +694,23 @@
     loginSub.textContent = 'အတည်ပြုနေသည်...';
     try {
       const doc = await db.collection('users').doc(email).get();
-      if (!doc.exists) {
+      if (!doc.exists && email !== ADMIN_EMAIL) {
         await handleUnregistered(fbUser);
         return;
       }
-      let udata = doc.data();
-      if (!udata.name && fbUser.displayName) {
+      let udata = doc.exists ? doc.data() : { email, name: fbUser.displayName || 'Admin', role: 'admin', position: 'Admin' };
+      if (doc.exists && !udata.name && fbUser.displayName) {
         // နာမည်မရှိသေးရင် Google နာမည်ကို ထည့် (ထပ်ဖတ်စရာမလို — local မှာပဲ ပေါင်း)
         udata = { ...udata, name: fbUser.displayName };
         db.collection('users').doc(email).update({ name: fbUser.displayName }).catch(() => {});
       }
+      if (!udata.shopId && email !== ADMIN_EMAIL) {
+        loginErr.textContent = 'ဒီ Gmail ကို ဆိုင်တစ်ဆိုင်ထဲ မသတ်မှတ်ရသေးပါ — ပိုင်ရှင်/Admin ကို ဆက်သွယ်ပါ';
+        await auth.signOut();
+        return;
+      }
       currentUser = { email, ...udata };
+      loadShopCache();
       loginOverlay.style.display = 'none';
       startListeners();   // data ဆွဲတာကို UI မဆွဲခင် ချက်ချင်းစ
       afterLogin();
@@ -643,6 +729,10 @@
     document.getElementById('menuName').textContent = currentUser.name || currentUser.email;
     document.getElementById('menuRole').textContent = titleOf(currentUser) + ' · ' + currentUser.email;
     applyShopHeader(); updateEditorBar(); renderLicenseBanner();
+    document.getElementById('adminBtn').style.display = isAdminUser() ? 'inline-block' : 'none';
+    document.getElementById('shopCodeLbl').textContent = currentUser.shopId || '-';
+    document.getElementById('staffShopCode').textContent = currentUser.shopId || '-';
+    if (isAdminUser() && !currentUser.shopId) { document.getElementById('adminPanel').classList.add('open'); }
     { const g = splitGraphemes((currentUser.name || currentUser.email || '?').trim())[0] || '?';
       document.getElementById('avatarLetter').textContent = g.toUpperCase();
       document.getElementById('menuBtn').style.background = currentUser.role === 'owner' ? 'var(--copper-dim)' : '#2f6b63'; }
@@ -658,46 +748,53 @@
   }
 
   function startListeners() {
-    if (!devicesListenerStarted) {
+    const sid = currentUser && currentUser.shopId;
+    if (sid && !devicesListenerStarted) {
       devicesListenerStarted = true;
-      db.collection('devices').orderBy('createdAt', 'desc').onSnapshot((snap) => {
+      unsubs.push(db.collection('devices').where('shopId', '==', sid).onSnapshot((snap) => {
         devices = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         setSync(true, 'ချိတ်ဆက်ပြီး — data auto-sync');
         if (currentUser) render();
-      }, (err) => setSync(false, 'Firestore error: ' + err.message));
+      }, (err) => setSync(false, 'Firestore error: ' + err.message)));
     }
-    if (!settingsListenerStarted) {
+    if (sid && !settingsListenerStarted) {
       settingsListenerStarted = true;
-      db.collection('settings').doc('shop').onSnapshot((doc) => {
-        if (doc.exists) {
-          shopInfo = { ...shopInfo, ...doc.data() };
-          try { localStorage.setItem('shopInfo', JSON.stringify(shopInfo)); } catch (e) {}
-          applyShopHeader();
-        }
-      }, (err) => console.warn('settings read error', err.message));
-    }
-    if (!licenseListenerStarted) {
-      licenseListenerStarted = true;
-      db.collection('settings').doc('license').onSnapshot((doc) => {
-        if (!doc.exists && doc.metadata.fromCache) return; // server အဖြေ မရသေးခင် မပြ
+      // ဆိုင်အချက်အလက် + App သက်တမ်း (License) — shops/{shopId} တစ်ခုတည်းမှာ
+      unsubs.push(db.collection('shops').doc(sid).onSnapshot((doc) => {
+        if (!doc.exists && doc.metadata.fromCache) return;
         licenseLoaded = true;
         if (doc.exists) {
           const d = doc.data(); const x = d.expiresAt;
+          shopInfo = { ...shopInfo, name: d.name || '', desc: d.desc || '', phone: d.phone || '', address: d.address || '', footer: d.footer || '' };
+          try { localStorage.setItem(shopCacheKey(), JSON.stringify(shopInfo)); } catch (e) {}
           license = { active: d.active !== false, plan: d.plan || '', expiresAt: x ? (x.toDate ? x.toDate() : new Date(x)) : null };
+          applyShopHeader();
         } else license = null;
         renderLicenseBanner();
-      }, () => { license = null; licenseLoaded = true; renderLicenseBanner(); });
+      }, () => { license = null; licenseLoaded = true; renderLicenseBanner(); }));
     }
-    if (!usersListenerStarted && currentUser && currentUser.role === 'owner') {
-      db.collection('staffRequests').onSnapshot((snap) => {
+    if (sid && !usersListenerStarted && currentUser.role === 'owner') {
+      usersListenerStarted = true;
+      unsubs.push(db.collection('staffRequests').where('shopId', '==', sid).onSnapshot((snap) => {
         requests = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(r => r.status === 'pending');
         renderRequests();
-      }, (err) => console.warn('requests error', err.message));
-      usersListenerStarted = true;
-      db.collection('users').onSnapshot((snap) => {
+      }, (err) => console.warn('requests error', err.message)));
+      unsubs.push(db.collection('users').where('shopId', '==', sid).onSnapshot((snap) => {
         users = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         renderStaffList();
-      });
+      }, (err) => console.warn('users error', err.message)));
+    }
+    if (isAdminUser() && !adminListenerStarted) {
+      adminListenerStarted = true;
+      unsubs.push(db.collection('ownerRequests').onSnapshot((snap) => {
+        adminOwnerReqs = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(r => r.status === 'pending');
+        updateMenuDot(); renderAdmin();
+      }, (err) => console.warn('ownerRequests error', err.message)));
+      unsubs.push(db.collection('shops').onSnapshot((snap) => {
+        adminShops = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        adminShopsLoaded = true;
+        renderAdmin();
+      }, (err) => console.warn('shops error', err.message)));
     }
   }
 
@@ -721,13 +818,15 @@
       address: document.getElementById('shopAddress').value.trim(),
       footer: document.getElementById('shopFooter').value.trim()
     };
+    if (!currentUser || !currentUser.shopId) return;
     shopInfo = data; applyShopHeader();
-    try { localStorage.setItem('shopInfo', JSON.stringify(data)); } catch (e) {}
+    try { localStorage.setItem(shopCacheKey(), JSON.stringify(data)); } catch (e) {}
     try {
-      await db.collection('settings').doc('shop').set(data);
+      await db.collection('shops').doc(currentUser.shopId).update(data);
+      await db.collection('shopCodes').doc(currentUser.shopId).set({ name: data.name || '' });
       shopPanel.classList.remove('open');
     } catch (e) {
-      alert('Server ပေါ်မှာ သိမ်းလို့မရပါ (Firestore rules မှာ settings/shop ကို ခွင့်ပြုပေးဖို့ လိုပါတယ်)။ ဒီဖုန်းထဲမှာပဲ သိမ်းထားပါတယ်။\n' + e.message);
+      alert('Server ပေါ်မှာ သိမ်းလို့မရပါ: ' + e.message);
     }
   });
 
@@ -738,6 +837,108 @@
   });
   document.getElementById('closeDashBtn').addEventListener('click', () => dashPanel.classList.remove('open'));
 
+  /* ---------- ADMIN PANEL (seller only) ---------- */
+  const adminPanel = document.getElementById('adminPanel');
+  document.getElementById('adminBtn').addEventListener('click', () => { adminPanel.classList.add('open'); renderAdmin(); adminPanel.scrollIntoView({ behavior: 'smooth', block: 'start' }); });
+  document.getElementById('closeAdminBtn').addEventListener('click', () => adminPanel.classList.remove('open'));
+  const tsDate = (x) => x ? (x.toDate ? x.toDate() : new Date(x)) : null;
+  function renderAdmin() {
+    if (!isAdminUser()) return;
+    document.getElementById('migrateBox').style.display = (adminShopsLoaded && !adminShops.some(x => x.id === 'YHK')) ? 'block' : 'none';
+    const n = adminOwnerReqs.length;
+    document.getElementById('ownerReqBox').style.display = n ? 'block' : 'none';
+    document.getElementById('adminBtn').textContent = '🛡 Admin — ဆိုင်များ' + (n ? ' (' + n + ' လျှောက်လွှာ)' : '');
+    document.getElementById('ownerReqList').innerHTML = adminOwnerReqs.map(r => `
+      <div class="reqcard">
+        <b>${escapeHtml(r.shopName)}</b> · ${escapeHtml(r.name)}
+        <span class="sm">📞 ${escapeHtml(r.phone)}</span>
+        <span class="sm">✉️ ${escapeHtml(r.email)}</span>
+        <div class="ra"><button class="ok" data-id="${escapeHtml(r.id)}" data-act="ok">✓ ငွေရပြီ — လက်ခံမည်</button><button class="no" data-id="${escapeHtml(r.id)}" data-act="no">လက်မခံ</button></div>
+      </div>`).join('');
+    const now = Date.now();
+    document.getElementById('shopList').innerHTML = adminShops.slice().sort((a, b) => (a.name || '').localeCompare(b.name || '')).map(x => {
+      const e = tsDate(x.expiresAt); const left = e ? Math.ceil((e.getTime() - now) / 86400000) : null;
+      const ok = x.active !== false && e && e.getTime() > now;
+      return `<div class="staff-row" style="flex-wrap:wrap;gap:8px;">
+        <div><span class="name">${escapeHtml(x.name || '(အမည်မရှိ)')}</span><span class="role-tag">${escapeHtml(x.id)}</span>
+        <span class="email">${escapeHtml(x.ownerEmail || '')}</span>
+        <span class="email" style="color:${ok ? 'var(--teal,#2f6b63)' : '#a12a22'}">${x.active === false ? '⛔ ပိတ်ထား' : (e ? (left > 0 ? left + ' ရက်ကျန် · ' : 'သက်တမ်းကုန် · ') + e.toLocaleDateString('en-GB') : 'သက်တမ်း မသတ်မှတ်ရသေး')}</span></div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          <button class="shopExt" data-id="${escapeHtml(x.id)}" data-d="30">+30 ရက်</button>
+          <button class="shopExt" data-id="${escapeHtml(x.id)}" data-d="365">+၁ နှစ်</button>
+          <button class="shopExt" data-id="${escapeHtml(x.id)}" data-d="0">ရက်ရွေး</button>
+          <button class="shopTgl" data-id="${escapeHtml(x.id)}">${x.active === false ? 'ပြန်ဖွင့်' : 'ပိတ်မည်'}</button>
+        </div></div>`;
+    }).join('') || '<div class="sm" style="color:var(--muted);">ဆိုင် မရှိသေးပါ</div>';
+  }
+  const genShopCode = () => { const c = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let r = ''; for (let i = 0; i < 6; i++) r += c[Math.floor(Math.random() * c.length)]; return r; };
+  document.getElementById('ownerReqList').addEventListener('click', async (e) => {
+    const act = e.target.dataset.act; if (!act || !isAdminUser()) return;
+    const r = adminOwnerReqs.find(x => x.id === e.target.dataset.id); if (!r) return;
+    try {
+      if (act === 'no') {
+        if (confirm(r.name + ' ကို လက်မခံမှာ သေချာလား?')) await db.collection('ownerRequests').doc(r.id).update({ status: 'rejected' });
+        return;
+      }
+      const days = parseInt(prompt(r.shopName + ' — App သက်တမ်း ဘယ်နှရက်ပေးမလဲ?', '30'), 10);
+      if (!days || days < 1) return;
+      let sid = '';
+      for (let i = 0; i < 8; i++) { const c = genShopCode(); if (!(await db.collection('shops').doc(c).get()).exists) { sid = c; break; } }
+      if (!sid) throw new Error('ဆိုင်ကုဒ် ထုတ်မရပါ၊ ပြန်ကြိုးစားပါ');
+      const exp = firebase.firestore.Timestamp.fromDate(new Date(Date.now() + days * 86400000));
+      const batch = db.batch();
+      batch.set(db.collection('shops').doc(sid), { name: r.shopName, desc: '', phone: r.phone || '', address: '', footer: '', active: true, plan: '', expiresAt: exp, ownerEmail: r.email, createdAt: new Date().toISOString() });
+      batch.set(db.collection('shopCodes').doc(sid), { name: r.shopName });
+      batch.set(db.collection('users').doc(r.email), { email: r.email, name: r.name, phone: r.phone || '', position: 'ပိုင်ရှင်', shopId: sid, role: 'owner' });
+      batch.delete(db.collection('ownerRequests').doc(r.id));
+      await batch.commit();
+      alert('လက်ခံပြီးပါပြီ။ ဆိုင်ကုဒ်: ' + sid + ' (ဝန်ထမ်းတွေ ဒီကုဒ်နဲ့ လျှောက်ရမယ်)');
+    } catch (err) { alert('လုပ်လို့မရပါ: ' + err.message); }
+  });
+  document.getElementById('shopList').addEventListener('click', async (e) => {
+    if (!isAdminUser()) return;
+    const id = e.target.dataset.id; if (!id) return;
+    const x = adminShops.find(v => v.id === id); if (!x) return;
+    try {
+      if (e.target.classList.contains('shopExt')) {
+        let d = parseInt(e.target.dataset.d, 10);
+        if (!d) { d = parseInt(prompt('ဘယ်နှရက် တိုးမလဲ?', '30'), 10); if (!d || d < 1) return; }
+        const cur = tsDate(x.expiresAt); const base = (cur && cur.getTime() > Date.now()) ? cur.getTime() : Date.now();
+        await db.collection('shops').doc(id).update({ expiresAt: firebase.firestore.Timestamp.fromDate(new Date(base + d * 86400000)), active: true });
+      } else if (e.target.classList.contains('shopTgl')) {
+        await db.collection('shops').doc(id).update({ active: x.active === false });
+      }
+    } catch (err) { alert('လုပ်လို့မရပါ: ' + err.message); }
+  });
+
+  // ဒေတာဟောင်း (shopId မပါတာ) ကို ဆိုင် YHK ထဲ ရွှေ့
+  document.getElementById('migrateBtn').addEventListener('click', async () => {
+    if (!isAdminUser() || !confirm('ရှိပြီးသား ဘောင်ချာ/ဝန်ထမ်း/ဆိုင်အချက်အလက်ကို ဆိုင် YHK ထဲ ရွှေ့မှာ သေချာလား?')) return;
+    const msg = document.getElementById('migrateMsg'); const btn = document.getElementById('migrateBtn');
+    btn.disabled = true; msg.textContent = 'ဖတ်နေသည်...';
+    try {
+      const SID = 'YHK';
+      const [dv, us, st, lc] = await Promise.all([
+        db.collection('devices').get(), db.collection('users').get(),
+        db.collection('settings').doc('shop').get(), db.collection('settings').doc('license').get()
+      ]);
+      const ops = [];
+      const sh = st.exists ? st.data() : {}; const l = lc.exists ? lc.data() : {};
+      const exp = l.expiresAt || firebase.firestore.Timestamp.fromDate(new Date(Date.now() + 30 * 86400000));
+      const ownerDoc = us.docs.find(d => d.data().role === 'owner' && d.id === ADMIN_EMAIL) || us.docs.find(d => d.data().role === 'owner');
+      ops.push(b => b.set(db.collection('shops').doc(SID), { name: sh.name || 'yhkelectronics', desc: sh.desc || '', phone: sh.phone || '', address: sh.address || '', footer: sh.footer || '', active: l.active !== false, plan: l.plan || '', expiresAt: exp, ownerEmail: ownerDoc ? ownerDoc.id : ADMIN_EMAIL, createdAt: new Date().toISOString() }));
+      ops.push(b => b.set(db.collection('shopCodes').doc(SID), { name: sh.name || 'yhkelectronics' }));
+      let nd = 0, nu = 0;
+      dv.docs.forEach(d => { if (!d.data().shopId) { nd++; ops.push(b => b.update(d.ref, { shopId: SID })); } });
+      us.docs.forEach(d => { if (!d.data().shopId) { nu++; ops.push(b => b.update(d.ref, { shopId: SID })); } });
+      for (let i = 0; i < ops.length; i += 400) {
+        msg.textContent = 'ရွှေ့နေသည်... ' + Math.min(i + 400, ops.length) + '/' + ops.length;
+        const b = db.batch(); ops.slice(i, i + 400).forEach(f => f(b)); await b.commit();
+      }
+      msg.textContent = '✓ ပြီးပါပြီ — ဘောင်ချာ ' + nd + ' ခု၊ ဝန်ထမ်း ' + nu + ' ယောက် ရွှေ့ပြီး။ ဒီ page ကို refresh လုပ်ပါ။';
+    } catch (err) { msg.textContent = 'မအောင်မြင်ပါ: ' + err.message; btn.disabled = false; }
+  });
+
   /* ---------- STAFF ADMIN (owner only) ---------- */
   const staffPanel = document.getElementById('staffPanel');
   document.getElementById('manageStaffBtn').addEventListener('click', () => {
@@ -745,9 +946,13 @@
   });
   document.getElementById('closeStaffBtn').addEventListener('click', () => staffPanel.classList.remove('open'));
 
+  function updateMenuDot() {
+    const n = requests.length + (isAdminUser() ? adminOwnerReqs.length : 0);
+    document.getElementById('menuDot').style.display = n ? 'block' : 'none';
+  }
   function renderRequests() {
     const n = requests.length;
-    document.getElementById('menuDot').style.display = n ? 'block' : 'none';
+    updateMenuDot();
     document.getElementById('manageStaffBtn').textContent = '👥 ဝန်ထမ်းစီမံမည်' + (n ? ' (' + n + ' လျှောက်လွှာ)' : '');
     document.getElementById('reqBox').style.display = n ? 'block' : 'none';
     document.getElementById('reqList').innerHTML = requests.map(r => `
@@ -764,7 +969,7 @@
     const r = requests.find(x => x.id === e.target.dataset.id); if (!r) return;
     try {
       if (act === 'ok') {
-        await db.collection('users').doc(r.email).set({ email: r.email, name: r.name, phone: r.phone || '', position: r.position || '', role: (document.querySelector('.reqRole[data-id="' + r.id + '"]') || {}).value || 'staff' });
+        await db.collection('users').doc(r.email).set({ email: r.email, name: r.name, phone: r.phone || '', position: r.position || '', shopId: currentUser.shopId, role: (document.querySelector('.reqRole[data-id="' + r.id + '"]') || {}).value || 'staff' });
         await db.collection('staffRequests').doc(r.id).delete();
       } else if (confirm(r.name + ' ရဲ့ လျှောက်လွှာကို လက်မခံမှာ သေချာလား?')) {
         await db.collection('staffRequests').doc(r.id).update({ status: 'rejected' });
@@ -826,7 +1031,7 @@
       alert('Gmail လိပ်စာ မှန်မှန်ကန်ကန် ရေးပေးပါ');
       return;
     }
-    await db.collection('users').doc(email).set({ email, name: document.getElementById('newStaffName').value.trim(), phone: document.getElementById('newStaffPhone').value.trim(), position: document.getElementById('newStaffPosition').value.trim(), role: document.getElementById('newStaffRole').value });
+    await db.collection('users').doc(email).set({ email, name: document.getElementById('newStaffName').value.trim(), phone: document.getElementById('newStaffPhone').value.trim(), position: document.getElementById('newStaffPosition').value.trim(), shopId: currentUser.shopId, role: document.getElementById('newStaffRole').value });
     document.getElementById('newStaffEmail').value = '';
     document.getElementById('newStaffName').value = '';
     document.getElementById('newStaffPhone').value = '';
@@ -980,6 +1185,7 @@
       saveBtn.disabled = false;
       return;
     }
+    if (!currentUser || !currentUser.shopId) { alert('ဆိုင်မသတ်မှတ်ရသေးပါ — ဘောင်ချာမထည့်နိုင်ပါ'); return; }
     const now = new Date().toISOString();
     saveBtn.disabled = true;
     const entry = {
@@ -993,6 +1199,7 @@
       date: document.getElementById('fDate').value,
       quote: Number(document.getElementById('fQuote').value) || 0,
       parts: Number(document.getElementById('fParts').value) || 0,
+      shopId: currentUser.shopId,
       status: 'received',
       createdAt: now,
       log: [{ from: null, to: 'received', by: currentUser ? (currentUser.name || currentUser.email) : '-', byRole: titleOf(currentUser), at: now }]
