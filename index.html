@@ -192,6 +192,14 @@
   .dnote { font-size:0.76rem; color:var(--muted); margin:6px 0 4px; line-height:1.6; }
   .homedash { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; margin-bottom: 14px; }
   .hd-title { font-family: var(--font-head); font-weight: 700; font-size: 1rem; color: var(--copper); margin-bottom: 10px; }
+  #toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: var(--surface-2); color: var(--text); border: 1px solid var(--copper-dim); padding: 10px 16px; border-radius: 14px; font-size: 0.85rem; z-index: 80; display: none; max-width: 90%; text-align: center; box-shadow: 0 8px 24px rgba(0,0,0,.5); }
+  .arc-row { padding: 10px 0; border-bottom: 1px solid var(--line); }
+  .arc-row:last-child { border-bottom: none; }
+  .arc-row .t { font-weight: 700; font-family: var(--font-head); }
+  .arc-row .c { color: var(--muted); font-size: 0.8rem; margin-left: 6px; }
+  .arc-row .b { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+  .arc-row .b button { background: none; border: 1px solid var(--line); color: var(--teal); border-radius: 6px; padding: 7px 12px; font-size: 0.8rem; cursor: pointer; font-family: var(--font-body); }
+  .arc-row .b button.arcDel { color: var(--red); }
 </style>
 </head>
 <body>
@@ -259,6 +267,7 @@
       <button id="renameBtn" style="display:none;">✏️ နာမည်ပြင်မည်</button>
       <button id="dashBtn" style="display:none;">📊 လစဉ် Dashboard</button>
       <button id="shopSettingsBtn" style="display:none;">🏪 ဆိုင်အချက်အလက်</button>
+      <button id="archiveBtn" style="display:none;">🗂 Archive (ဘောင်ချာဟောင်း)</button>
       <button id="manageStaffBtn" style="display:none;">👥 ဝန်ထမ်းစီမံမည်</button>
       <button id="adminBtn" style="display:none;">🛡 Admin — ဆိုင်များ</button>
       <button id="logoutBtn" class="danger">⎋ ထွက်မည်</button>
@@ -276,7 +285,7 @@
     <div class="stat expense"><div class="label">အပိုပစ္စည်းကုန်ကျစရိတ်</div><div class="value" id="statExpense">0</div></div>
     <div class="stat profit"><div class="label">လက်ကျန်အမြတ်ငွေ</div><div class="value" id="statProfit">0</div></div>
   </div>
-    <div class="dnote">ဒေတာကို ယခုလ အပါအဝင် ၃ လစာသာ သိမ်းထားပါတယ် — ပြီးစီးပြီးသား ဘောင်ချာဟောင်းတွေကို အလိုအလျောက် ဖျက်ပါမယ်</div>
+    <div class="dnote">ဒေတာကို ယခုလ အပါအဝင် ၃ လစာသာ ပြပါတယ် — ၃ လထက်စောတဲ့ ဘောင်ချာတွေကို Archive သို့ အလိုအလျောက် ရွှေ့ပါမယ် (menu → 🗂 Archive မှာ PDF/CSV ထုတ်၊ ဖျက်လို့ရ)</div>
     <div class="actions"><button class="ghost" id="closeDashBtn">ပိတ်မည်</button></div>
   </div>
 
@@ -308,6 +317,13 @@
     <div style="font-size:0.82rem;color:var(--muted);margin:10px 0 6px;">ဆိုင်များ</div>
     <div id="shopList"></div>
     <div class="actions"><button class="ghost" id="closeAdminBtn">ပိတ်မည်</button></div>
+  </div>
+
+  <div class="panel" id="archivePanel">
+    <h2>🗂 Archive — ဘောင်ချာဟောင်း</h2>
+    <div class="dnote">၃ လထက်စောတဲ့ ဘောင်ချာတွေ ဒီမှာ အလိုအလျောက် ရောက်လာပါတယ်။ လအလိုက် <b>PDF + CSV</b> ကို ဖုန်းထဲ ထုတ်ပြီး ဖိုင်ကို စစ်ပြီးမှ <b>ဖျက်</b>ပါ။ ဖျက်ပြီးရင် ပြန်မရနိုင်ပါ။</div>
+    <div id="archiveList"></div>
+    <div class="actions"><button class="ghost" id="closeArchiveBtn">ပိတ်မည်</button></div>
   </div>
 
   <div class="panel" id="staffPanel">
@@ -427,6 +443,8 @@
   </div>
 </div>
 
+<div id="toast"></div>
+
 <script>
   const STATUS_LABEL = {
     received: 'လက်ခံရရှိ', checking: 'စစ်ဆေးနေဆဲ', repairing: 'ပြင်ဆင်နေဆဲ', waiting_parts: 'အပိုပစ္စည်းစောင့်နေ', ready: 'ပြင်ပြီး - မယူသေးပါ',
@@ -475,7 +493,7 @@
     devicesListenerStarted = usersListenerStarted = settingsListenerStarted = licenseListenerStarted = adminListenerStarted = false;
     devices = []; users = []; requests = []; adminOwnerReqs = []; adminShops = []; adminShopsLoaded = false;
     license = null; licenseLoaded = false;
-    expiredPending = []; purgeClockOk = false;
+    expiredPending = []; purgeClockOk = false; purgeBlocked = false; archiveMonths = {}; archiveExported = {};
     shopInfo = { name: '', desc: '', phone: '', address: '', footer: '' };
   }
 
@@ -814,6 +832,7 @@
     document.getElementById('manageStaffBtn').style.display = currentUser.role === 'owner' ? 'inline-block' : 'none';
     document.getElementById('dashBtn').style.display = currentUser.role === 'owner' ? 'inline-block' : 'none';
     document.getElementById('shopSettingsBtn').style.display = currentUser.role === 'owner' ? 'inline-block' : 'none';
+    document.getElementById('archiveBtn').style.display = currentUser.role === 'owner' ? 'inline-block' : 'none';
     document.getElementById('statsBar').style.display = currentUser.role === 'owner' ? 'grid' : 'none';
     if (!document.getElementById('fReceivedBy').value) {
       document.getElementById('fReceivedBy').value = currentUser.name || currentUser.email;
@@ -1129,7 +1148,11 @@
 
   document.getElementById('fDate').value = todayKey();
 
-  function nextVoucherNumber() { return 'V-' + String(devices.length + 1).padStart(4, '0'); }
+  function nextVoucherNumber() {
+    let mx = 0;
+    devices.concat(expiredPending).forEach(d => { const m = /(\d+)\s*$/.exec(d.voucher || ''); if (m) mx = Math.max(mx, parseInt(m[1], 10)); });
+    return 'V-' + String(mx + 1).padStart(4, '0');
+  }
 
   let editingId = null;
   const EDIT_LABELS = { inspectFee:'စစ်ဆေးခ', voucher:'ဘောင်ချာနံပါတ်', customer:'Customer', phone:'ဖုန်း', device:'စက်ပစ္စည်း', receivedBy:'လက်ခံသူ', technician:'ပြင်မည့်သူ', issue:'ချို့ယွင်းချက်', date:'လက်ခံရက်စွဲ', quote:'ပြင်ဆင်ခကျသင့်ငွေ', parts:'အပိုပစ္စည်းကုန်ကျစရိတ်' };
@@ -1811,30 +1834,244 @@
     const n = new Date(), c = new Date(n.getFullYear(), n.getMonth() - 2, 1);
     return c.getFullYear() + '-' + String(c.getMonth() + 1).padStart(2, '0');
   }
-  // ပြီးစီး/မပြင်နိုင် ဖြစ်ပြီးသား + (လက်ခံလ၊ ပိတ်လ နှစ်ခုထဲက နောက်ကျတဲ့လ) က ၃ လထက် စောရင် expired
-  // မပြီးသေးတဲ့ ဘောင်ချာ (customer စက်ကျန်နေသေး) ကို မဖျက်
+  // လက်ခံလ ၃ လထက် စောရင် expired (ဖျက်မီ PDF/CSV အရင်သိမ်းမယ်)
   function isExpired(d) {
-    if (!(d.status === 'done' || isFeeStatus(d))) return false;
-    let k = monthOf(d);
-    if (!k) return false;
-    const c = closedDayOf(d).slice(0, 7);
-    if (c > k) k = c;
-    return k < retentionCutoffMonth();
+    const k = monthOf(d);
+    return !!k && k < retentionCutoffMonth();
   }
+  let purgeBlocked = false, archiveMonths = {}, archiveExported = {};
+  const toastEl = document.getElementById('toast');
+  let toastT = null;
+  function showToast(msg, ms) {
+    toastEl.textContent = msg; toastEl.style.display = 'block';
+    clearTimeout(toastT); toastT = setTimeout(() => { toastEl.style.display = 'none'; }, ms || 7000);
+  }
+
+  // ၃ လထက်စောတာ → archives သို့ ရွေ့ → server က ပြန်ဖတ်စစ် → မှန်မှ မူရင်းကို ဖျက် (အလိုအလျောက်)
   async function maybePurge() {
-    if (purging || !expiredPending.length || !purgeClockOk) return;
-    if (!currentUser || currentUser.role !== 'owner' || !licenseOk()) return;   // ပိုင်ရှင်ပဲ ဖျက်ခွင့်ရှိ
+    if (purging || purgeBlocked || !expiredPending.length || !purgeClockOk) return;
+    if (!currentUser || currentUser.role !== 'owner' || !licenseOk()) return;   // ပိုင်ရှင်ပဲ ရွှေ့ခွင့်ရှိ
     purging = true;
-    const list = expiredPending; expiredPending = [];
+    const list = expiredPending.slice(); expiredPending = [];
     try {
+      const sid = currentUser.shopId, run = Date.now(), enc = new TextEncoder();
+      const groups = {};
+      list.forEach(d => { const m = monthOf(d) || 'unknown'; (groups[m] = groups[m] || []).push(d); });
+      const docs = [];
+      Object.keys(groups).sort().forEach(m => {
+        let part = [], bytes = 0, n = 0;
+        const flush = () => {
+          if (!part.length) return;
+          docs.push({ id: sid + '_' + m + '_' + run + '_' + (n++), data: { shopId: sid, month: m, run, count: part.length, items: part, archivedAt: new Date().toISOString() } });
+          part = []; bytes = 0;
+        };
+        sortOld(groups[m]).forEach(d => {
+          const { id, ...rest } = d;
+          const item = { ...rest, docId: id };
+          const sz = enc.encode(JSON.stringify(item)).length;
+          if (part.length && (bytes + sz > 500000 || part.length >= 200)) flush();
+          part.push(item); bytes += sz;
+        });
+        flush();
+      });
+      for (let i = 0; i < docs.length; i += 100) {
+        const b = db.batch();
+        docs.slice(i, i + 100).forEach(x => b.set(db.collection('archives').doc(x.id), x.data));
+        await b.commit();
+      }
+      // server ကနေ ပြန်ဖတ်စစ် (cache မဟုတ်)
+      const got = new Set();
+      for (const x of docs) {
+        const snap = await db.collection('archives').doc(x.id).get({ source: 'server' });
+        const items = snap.exists ? (snap.data().items || []) : [];
+        if (items.length !== x.data.count) throw new Error('Archive စစ်ဆေးမှု မကိုက်ပါ');
+        items.forEach(it => got.add(it.docId));
+      }
+      if (!list.every(d => got.has(d.id))) throw new Error('Archive စစ်ဆေးမှု မကိုက်ပါ');
       for (let i = 0; i < list.length; i += 400) {
         const b = db.batch();
         list.slice(i, i + 400).forEach(d => b.delete(db.collection('devices').doc(d.id)));
         await b.commit();
       }
-    } catch (e) { console.warn('auto-delete error', e.message); }
+      showToast('🗂 ၃ လထက်စောတဲ့ ဘောင်ချာ ' + list.length + ' ခုကို Archive သို့ ရွှေ့ပြီးပါပြီ (menu → Archive)');
+    } catch (e) {
+      console.warn('archive error', e.message);
+      expiredPending = list; purgeBlocked = true;   // ဒီ session မှာ ထပ်မကြိုးစား၊ မူရင်းဘောင်ချာ မဖျက်ပါ
+      showToast('Archive မအောင်မြင်ပါ (ဘာမှ မဖျက်ပါ): ' + e.message + ' — Firestore rules မှာ archives ခွင့်ပြုထားရမယ်', 12000);
+    }
     purging = false;
   }
+
+  function downloadBlob(blob, name) {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = name;
+    document.body.appendChild(a); a.click();
+    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 5000);
+  }
+
+  function sortOld(rows) {
+    return rows.slice().sort((a, b) => String(a.date || dayKeyOf(a.createdAt)).localeCompare(String(b.date || dayKeyOf(b.createdAt))) || String(a.voucher || '').localeCompare(String(b.voucher || '')));
+  }
+
+  function buildOldVouchersCsv(rows) {
+    const keys = ['voucher', 'date', 'customer', 'phone', 'device', 'issue', 'status', 'quote', 'parts', 'inspectFee', 'receivedBy', 'technician', 'unrepairReason', 'createdAt', 'shopId'];
+    const esc = (v) => { v = v == null ? '' : String(v); return /[",\n\r]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
+    const lines = [keys.join(',')].concat(rows.map(d => keys.map(k => esc(k === 'status' ? (STATUS_LABEL[d.status] || d.status) : d[k])).join(',')));
+    return new Blob(['﻿' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' });
+  }
+
+  async function buildPdfFromCanvases(canvases, wPt, hPt) {
+    const enc = new TextEncoder();
+    const chunks = []; let len = 0; const offsets = [];
+    const push = (x) => { const b = typeof x === 'string' ? enc.encode(x) : x; chunks.push(b); len += b.length; };
+    const begin = (n) => { offsets[n] = len; push(n + ' 0 obj\n'); };
+    const n = canvases.length;
+    push('%PDF-1.4\n');
+    begin(1); push('<< /Type /Catalog /Pages 2 0 R >>\nendobj\n');
+    begin(2); push('<< /Type /Pages /Kids [' + canvases.map((_, i) => (5 + 3 * i) + ' 0 R').join(' ') + '] /Count ' + n + ' >>\nendobj\n');
+    for (let i = 0; i < n; i++) {
+      const cv = canvases[i];
+      const blob = await new Promise(r => cv.toBlob(r, 'image/jpeg', 0.88));
+      const jpg = new Uint8Array(await blob.arrayBuffer());
+      begin(3 + 3 * i);
+      push('<< /Type /XObject /Subtype /Image /Width ' + cv.width + ' /Height ' + cv.height + ' /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ' + jpg.length + ' >>\nstream\n');
+      push(jpg); push('\nendstream\nendobj\n');
+      const content = 'q ' + wPt + ' 0 0 ' + hPt + ' 0 0 cm /Im0 Do Q';
+      begin(4 + 3 * i); push('<< /Length ' + content.length + ' >>\nstream\n' + content + '\nendstream\nendobj\n');
+      begin(5 + 3 * i); push('<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ' + wPt + ' ' + hPt + '] /Resources << /XObject << /Im0 ' + (3 + 3 * i) + ' 0 R >> >> /Contents ' + (4 + 3 * i) + ' 0 R >>\nendobj\n');
+    }
+    const total = 2 + 3 * n, xref = len;
+    push('xref\n0 ' + (total + 1) + '\n0000000000 65535 f \n');
+    for (let k = 1; k <= total; k++) push(String(offsets[k]).padStart(10, '0') + ' 00000 n \n');
+    push('trailer\n<< /Size ' + (total + 1) + ' /Root 1 0 R >>\nstartxref\n' + xref + '\n%%EOF');
+    const out = new Uint8Array(len); let o = 0;
+    chunks.forEach(c => { out.set(c, o); o += c.length; });
+    return new Blob([out], { type: 'application/pdf' });
+  }
+
+  // မြန်မာစာ မှန်အောင် canvas နဲ့ ဆွဲပြီး PDF စာမျက်နှာအဖြစ် ထည့်
+  async function buildOldVouchersPdf(rows) {
+    const FONT = "'Noto Sans Myanmar', 'Space Grotesk', sans-serif";
+    try { await document.fonts.load("500 20px 'Noto Sans Myanmar'"); await document.fonts.load("700 20px 'Noto Sans Myanmar'"); } catch (e) {}
+    const W = 1754, H = 1240, M = 40, FS = 20, LH = 30, MAXL = 8;
+    const num = (v) => Number(v || 0).toLocaleString('en-US');
+    const cols = [
+      ['ဘောင်ချာ', 150, d => d.voucher], ['ရက်စွဲ', 130, d => d.date || dayKeyOf(d.createdAt)],
+      ['Customer', 220, d => d.customer], ['ဖုန်း', 170, d => d.phone], ['စက်ပစ္စည်း', 260, d => d.device],
+      ['ချို့ယွင်းချက်', 330, d => d.issue], ['အခြေအနေ', 170, d => STATUS_LABEL[d.status] || d.status],
+      ['ကျသင့်ငွေ', 120, d => num(isFeeStatus(d) ? inspectFeeOf(d) : d.quote)], ['အပိုပစ္စည်း', 120, d => num(d.parts)]
+    ];
+    const pages = []; let cv, ctx, y;
+    const newPage = () => {
+      cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+      ctx = cv.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, H);
+      ctx.fillStyle = '#000'; ctx.textBaseline = 'top'; ctx.textAlign = 'left';
+      pages.push(cv);
+      ctx.font = '700 26px ' + FONT;
+      ctx.fillText((shopInfo.name || 'Electronics Service') + ' — ဘောင်ချာဟောင်း စာရင်း (' + rows.length + ' ခု)', M, M);
+      y = M + 46;
+      ctx.font = '700 ' + FS + 'px ' + FONT;
+      let x = M; cols.forEach(c => { ctx.fillText(c[0], x + 6, y); x += c[1]; });
+      y += LH + 4;
+      ctx.strokeStyle = '#000'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(M, y); ctx.lineTo(W - M, y); ctx.stroke();
+      y += 6;
+    };
+    newPage();
+    for (const d of rows) {
+      ctx.font = '500 ' + FS + 'px ' + FONT;
+      const cells = cols.map(c => {
+        let lines = wrapText(ctx, String(c[2](d) == null || c[2](d) === '' ? '-' : c[2](d)), c[1] - 12);
+        if (lines.length > MAXL) { lines = lines.slice(0, MAXL); lines[MAXL - 1] += ' …'; }
+        return lines;
+      });
+      const rh = Math.max(...cells.map(l => l.length)) * LH + 12;
+      if (y + rh > H - M - 30) newPage();
+      ctx.font = '500 ' + FS + 'px ' + FONT; ctx.fillStyle = '#000';
+      let x = M;
+      cells.forEach((lines, i) => { lines.forEach((l, j) => ctx.fillText(l, x + 6, y + 6 + j * LH)); x += cols[i][1]; });
+      y += rh;
+      ctx.strokeStyle = '#bbb'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(M, y); ctx.lineTo(W - M, y); ctx.stroke();
+    }
+    pages.forEach((c, i) => {
+      const g = c.getContext('2d'); g.fillStyle = '#444'; g.textBaseline = 'top'; g.textAlign = 'right';
+      g.font = '400 18px ' + FONT; g.fillText((i + 1) + ' / ' + pages.length, W - M, H - M - 6);
+    });
+    return buildPdfFromCanvases(pages, 842, 595);   // A4 landscape
+  }
+
+  /* ---------- ARCHIVE PANEL (owner) ---------- */
+  const archivePanel = document.getElementById('archivePanel');
+  const archiveListEl = document.getElementById('archiveList');
+  document.getElementById('archiveBtn').addEventListener('click', () => {
+    archivePanel.classList.add('open');
+    archivePanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    loadArchive();
+  });
+  document.getElementById('closeArchiveBtn').addEventListener('click', () => archivePanel.classList.remove('open'));
+
+  async function loadArchive() {
+    if (!currentUser || !currentUser.shopId) return;
+    archiveListEl.innerHTML = '<div class="dnote">ဖတ်နေသည်...</div>';
+    try {
+      const snap = await db.collection('archives').where('shopId', '==', currentUser.shopId).get();
+      const by = {};
+      snap.docs.forEach(doc => {
+        const x = doc.data(), m = x.month || 'unknown';
+        const o = by[m] || (by[m] = { items: new Map(), ids: [] });
+        o.ids.push(doc.id);
+        (x.items || []).forEach(it => { const k = it.docId || ((it.voucher || '') + '|' + (it.createdAt || '')); if (!o.items.has(k)) o.items.set(k, it); });
+      });
+      archiveMonths = {};
+      Object.keys(by).forEach(m => { archiveMonths[m] = { items: sortOld([...by[m].items.values()]), ids: by[m].ids }; });
+      renderArchive();
+    } catch (e) {
+      archiveListEl.innerHTML = '<div class="login-err">ဖတ်လို့မရပါ: ' + escapeHtml(e.message) + '<br>(Firestore rules မှာ archives ခွင့်ပြုပေးထားဖို့ လိုပါတယ်)</div>';
+    }
+  }
+
+  function renderArchive() {
+    const months = Object.keys(archiveMonths).sort().reverse();
+    archiveListEl.innerHTML = months.map(m => {
+      const a = archiveMonths[m];
+      const lbl = /^\d{4}-\d{2}$/.test(m) ? monthLabel(m) : m;
+      return '<div class="arc-row"><span class="t">' + escapeHtml(lbl) + '</span><span class="c">' + a.items.length + ' ခု' + (archiveExported[m] ? ' · ✓ ဖိုင်ထုတ်ပြီး' : '') + '</span>' +
+        '<div class="b"><button class="arcExp" data-m="' + escapeHtml(m) + '">📥 PDF + CSV ထုတ်မည်</button><button class="arcDel" data-m="' + escapeHtml(m) + '">🗑 ဖျက်မည်</button></div></div>';
+    }).join('') || '<div class="dnote">Archive ထဲ ဘာမှ မရှိသေးပါ</div>';
+  }
+
+  archiveListEl.addEventListener('click', async (e) => {
+    const m = e.target.dataset && e.target.dataset.m;
+    const a = m && archiveMonths[m];
+    if (!a) return;
+    const btn = e.target;
+    if (btn.classList.contains('arcExp')) {
+      btn.disabled = true; const old = btn.textContent; btn.textContent = 'ဖိုင်ပြင်နေသည်...';
+      try {
+        const pdf = await buildOldVouchersPdf(a.items);
+        downloadBlob(pdf, 'archive_' + m + '.pdf');
+        await new Promise(r => setTimeout(r, 900));
+        downloadBlob(buildOldVouchersCsv(a.items), 'archive_' + m + '.csv');
+        archiveExported[m] = true;
+        renderArchive();
+        showToast('ဖိုင် ၂ ခု (archive_' + m + '.pdf / .csv) ကို Downloads ထဲ သိမ်းပြီး');
+      } catch (err) { alert('ဖိုင်မထုတ်နိုင်ပါ: ' + err.message); btn.disabled = false; btn.textContent = old; }
+    } else if (btn.classList.contains('arcDel')) {
+      const warn = archiveExported[m] ? '' : '\n\n⚠️ ဒီလအတွက် PDF/CSV ကို ဒီအကြိမ်မှာ မထုတ်ရသေးပါ!';
+      if (!confirm((/^\d{4}-\d{2}$/.test(m) ? monthLabel(m) : m) + ' ရဲ့ Archive ' + a.items.length + ' ခုကို အပြီးဖျက်မှာ သေချာလား? ပြန်မရနိုင်ပါ။' + warn)) return;
+      if (!archiveExported[m] && !confirm('ဖိုင်မထုတ်ရသေးဘဲ ဖျက်မှာ သေချာပါသလား?')) return;
+      btn.disabled = true; btn.textContent = 'ဖျက်နေသည်...';
+      try {
+        for (let i = 0; i < a.ids.length; i += 400) {
+          const b = db.batch();
+          a.ids.slice(i, i + 400).forEach(id => b.delete(db.collection('archives').doc(id)));
+          await b.commit();
+        }
+        delete archiveMonths[m]; delete archiveExported[m];
+        renderArchive();
+        showToast('Archive ဖျက်ပြီးပါပြီ');
+      } catch (err) { alert('ဖျက်လို့မရပါ: ' + err.message); btn.disabled = false; btn.textContent = '🗑 ဖျက်မည်'; }
+    }
+  });
 </script>
 </body>
 </html>
