@@ -15,7 +15,8 @@
 <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Noto+Sans+Myanmar:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Noto+Sans+Myanmar:wght@400;500;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Noto+Sans+Myanmar:wght@400;500;700&display=swap" rel="stylesheet"></noscript>
 <script src="https://cdn.jsdelivr.net/npm/firebase@10.12.2/firebase-app-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/firebase@10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/firebase@10.12.2/firebase-auth-compat.js"></script>
@@ -496,6 +497,9 @@
   };
   firebase.initializeApp(firebaseConfig);
   const db = firebase.firestore();
+  // လိုင်းညံ့တဲ့နေရာမှာ ပိုခိုင်မာအောင် (WebChannel မရရင် long-polling သို့ အလိုအလျောက်ပြောင်း) + ဖုန်းထဲ data cache သိမ်း → နောက်တစ်ခါ ချက်ချင်းပွင့်
+  try { db.settings({ experimentalAutoDetectLongPolling: true, merge: true }); } catch (e) {}
+  try { db.enablePersistence({ synchronizeTabs: true }).catch(() => {}); } catch (e) {}
   // Admin (ဆိုင်ရောင်းသူ) Gmail — ဆိုင်ပိုင်ရှင်လျှောက်လွှာ လက်ခံ၊ သက်တမ်းထိန်းသူ။ firestore.rules ထဲက email နဲ့ တူရမယ်
   const ADMIN_EMAIL = 'yhkelectronics@gmail.com';
   // ဝယ်သူ ပိုင်ရှင်လျှောက်ပြီး စောင့်နေတဲ့စာမျက်နှာမှာ ပြမယ့် ငွေလွှဲ/ဆက်သွယ်ရန် စာသား (လိုရင် ရေးပါ)
@@ -528,7 +532,7 @@
     devicesListenerStarted = usersListenerStarted = settingsListenerStarted = licenseListenerStarted = adminListenerStarted = false;
     devices = []; users = []; requests = []; adminOwnerReqs = []; adminShops = []; adminShopsLoaded = false;
     license = null; licenseLoaded = false;
-    expiredPending = []; purgeClockOk = false; purgeBlocked = false; knownSent = null; knownDec = null; pendingOnly = false; archiveMonths = {}; archiveExported = {};
+    expiredPending = []; purgeClockOk = false; purgeBlocked = false; devicesServerOk = false; knownSent = null; knownDec = null; pendingOnly = false; archiveMonths = {}; archiveExported = {};
     shopInfo = { name: '', desc: '', phone: '', address: '', footer: '' };
   }
 
@@ -731,6 +735,7 @@
     if (!EMAIL_RE.test(email)) { loginErr.textContent = 'Email လိပ်စာ မှန်မှန်ကန်ကန် ရေးပေးပါ'; return; }
     if (pass.length < 6) { loginErr.textContent = 'Password အနည်းဆုံး ၆ လုံး ရေးပေးပါ'; return; }
     setAuthBusy(true);
+    loginOk.textContent = 'ဝင်နေသည်... (လိုင်းနှေးရင် ခဏစောင့်ပါ)';
     try {
       if (mode === 'up') {
         const c = await auth.createUserWithEmailAndPassword(email, pass);
@@ -740,6 +745,7 @@
       }
       authPass.value = '';
     } catch (e) {
+      loginOk.textContent = '';
       loginErr.textContent = authErrMsg(e);
       setAuthBusy(false);
     }
@@ -793,6 +799,7 @@
 
   auth.onAuthStateChanged(async (fbUser) => {
     if (!fbUser) {
+      try { Object.keys(localStorage).filter(k => k.indexOf('svc_profile_') === 0).forEach(k => localStorage.removeItem(k)); } catch (e) {}
       stopListeners();
       currentUser = null;
       applyShopHeader();
@@ -818,33 +825,78 @@
     }
     const email = fbUser.email;
     loginSub.textContent = 'အတည်ပြုနေသည်...';
+    const PROF_KEY = 'svc_profile_' + email;
+    const readProf = () => { try { const x = JSON.parse(localStorage.getItem(PROF_KEY) || 'null'); return (x && x.shopId) ? x : null; } catch (e) { return null; } };
+    const saveProf = (u) => { try { if (u && u.shopId) localStorage.setItem(PROF_KEY, JSON.stringify(u)); } catch (e) {} };
+    // ၁) ဒီဖုန်းမှာ ဝင်ဖူးပြီးသား → ဖုန်းထဲက profile နဲ့ ချက်ချင်းဝင် (အင်တာနက် မစောင့်)၊ နောက်ကွယ်မှာ စစ်
+    const cached = readProf();
+    if (cached) {
+      currentUser = { email, ...cached };
+      loadShopCache();
+      loginOverlay.style.display = 'none';
+      startListeners();
+      afterLogin();
+      refreshProfile(fbUser, cached, saveProf);
+      return;
+    }
+    // ၂) ပထမဆုံးအကြိမ် — server ကဖတ်၊ လိုင်းနှေးရင် ၉ စက္ကန့်နောက် cache ဆီ ပြန်ကြည့်
     try {
-      const doc = await db.collection('users').doc(email).get();
+      const doc = await getDocFast(db.collection('users').doc(email));
       if (!doc.exists && email !== ADMIN_EMAIL) {
         await handleUnregistered(fbUser);
         return;
       }
       let udata = doc.exists ? doc.data() : { email, name: fbUser.displayName || 'Admin', role: 'admin', position: 'Admin' };
       if (doc.exists && !udata.name && fbUser.displayName) {
-        // နာမည်မရှိသေးရင် Google နာမည်ကို ထည့် (ထပ်ဖတ်စရာမလို — local မှာပဲ ပေါင်း)
         udata = { ...udata, name: fbUser.displayName };
         db.collection('users').doc(email).update({ name: fbUser.displayName }).catch(() => {});
       }
       if (!udata.shopId && email !== ADMIN_EMAIL) {
-        loginErr.textContent = 'ဒီ Gmail ကို ဆိုင်တစ်ဆိုင်ထဲ မသတ်မှတ်ရသေးပါ — ပိုင်ရှင်/Admin ကို ဆက်သွယ်ပါ';
+        loginErr.textContent = 'ဒီ Email ကို ဆိုင်တစ်ဆိုင်ထဲ မသတ်မှတ်ရသေးပါ — ပိုင်ရှင်/Admin ကို ဆက်သွယ်ပါ';
         await auth.signOut();
         return;
       }
+      saveProf(udata);
       currentUser = { email, ...udata };
       loadShopCache();
       loginOverlay.style.display = 'none';
       startListeners();   // data ဆွဲတာကို UI မဆွဲခင် ချက်ချင်းစ
       afterLogin();
     } catch (e) {
-      loginErr.textContent = 'အမှား: ' + e.message;
+      const slow = /offline|timeout|unavailable|network/i.test(e && e.message || '');
+      loginErr.textContent = slow ? 'အင်တာနက် လိုင်းနှေးနေပါတယ် — ခဏနေပြီး စာမျက်နှာကို refresh လုပ်ပါ (ပထမဆုံးအကြိမ်သာ လိုင်းကောင်းဖို့ လိုပါတယ်)' : 'အမှား: ' + (e && e.message);
       setAuthBusy(false);
     }
   });
+
+  // server ကို အချိန်ကန့်သတ်ပြီး ဖတ် — မရရင် ဖုန်းထဲ cache က ပြန်ယူ
+  async function getDocFast(ref) {
+    try {
+      return await Promise.race([ref.get(), new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 9000))]);
+    } catch (e) {
+      try { const c = await ref.get({ source: 'cache' }); if (c.exists) return c; } catch (_) {}
+      throw e;
+    }
+  }
+  // ဖုန်းထဲက profile နဲ့ ဝင်ပြီးနောက် နောက်ကွယ်မှာ server နဲ့ တိုက်စစ် (ဝန်ထမ်းဖယ်ထားရင်/role ပြောင်းရင် ချက်ချင်းလိုက်ပြင်)
+  async function refreshProfile(fbUser, cached, saveProf) {
+    try {
+      const doc = await db.collection('users').doc(fbUser.email).get({ source: 'server' });
+      if (!doc.exists || !doc.data().shopId) {
+        try { localStorage.removeItem('svc_profile_' + fbUser.email); } catch (e) {}
+        await auth.signOut();
+        loginErr.textContent = 'ဒီ Email ကို ဆိုင်ကနေ ဖယ်ထားပါတယ် — ပိုင်ရှင်ကို ဆက်သွယ်ပါ';
+        return;
+      }
+      const nu = doc.data();
+      saveProf(nu);
+      if (nu.role !== cached.role || nu.shopId !== cached.shopId) { location.reload(); return; }
+      if ((nu.name || '') !== (cached.name || '') || (nu.position || '') !== (cached.position || '')) {
+        currentUser = { email: fbUser.email, ...nu };
+        afterLogin();
+      }
+    } catch (e) { /* လိုင်းမရရင် ကျော် — ဖုန်းထဲ profile နဲ့ပဲ ဆက်သုံး */ }
+  }
 
   function afterLogin() {
     document.getElementById('whoamiBox').style.display = 'flex';
@@ -885,7 +937,8 @@
         expiredPending = all.filter(isExpired);
         const newest = all.reduce((m, d) => Math.max(m, new Date(d.createdAt || 0).getTime() || 0), 0);
         purgeClockOk = (Date.now() - newest) <= 45 * 86400000;   // ဖုန်းနာရီမှား/ဆိုင်ရပ်နေရင် မဖျက်
-        maybePurge();
+        devicesServerOk = !snap.metadata.fromCache;
+        if (devicesServerOk) maybePurge();
         setSync(true, 'ချိတ်ဆက်ပြီး — data auto-sync');
         checkSentAlerts();
         if (currentUser) render();
@@ -2037,7 +2090,7 @@
     const k = monthOf(d);
     return !!k && k < retentionCutoffMonth();
   }
-  let purgeBlocked = false, archiveMonths = {}, archiveExported = {};
+  let purgeBlocked = false, archiveMonths = {}, archiveExported = {}, devicesServerOk = false;
   const toastEl = document.getElementById('toast');
   let toastT = null;
   function showToast(msg, ms) {
@@ -2047,7 +2100,7 @@
 
   // ၃ လထက်စောတာ → archives သို့ ရွေ့ → server က ပြန်ဖတ်စစ် → မှန်မှ မူရင်းကို ဖျက် (အလိုအလျောက်)
   async function maybePurge() {
-    if (purging || purgeBlocked || !expiredPending.length || !purgeClockOk) return;
+    if (purging || purgeBlocked || !devicesServerOk || !expiredPending.length || !purgeClockOk) return;
     if (!currentUser || currentUser.role !== 'owner' || !licenseOk()) return;   // ပိုင်ရှင်ပဲ ရွှေ့ခွင့်ရှိ
     purging = true;
     const list = expiredPending.slice(); expiredPending = [];
@@ -2243,73 +2296,4 @@
   document.getElementById('archiveBtn').addEventListener('click', () => {
     archivePanel.classList.add('open');
     archivePanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    loadArchive();
-  });
-  document.getElementById('closeArchiveBtn').addEventListener('click', () => archivePanel.classList.remove('open'));
-
-  async function loadArchive() {
-    if (!currentUser || !currentUser.shopId) return;
-    archiveListEl.innerHTML = '<div class="dnote">ဖတ်နေသည်...</div>';
-    try {
-      const snap = await db.collection('archives').where('shopId', '==', currentUser.shopId).get();
-      const by = {};
-      snap.docs.forEach(doc => {
-        const x = doc.data(), m = x.month || 'unknown';
-        const o = by[m] || (by[m] = { items: new Map(), ids: [] });
-        o.ids.push(doc.id);
-        (x.items || []).forEach(it => { const k = it.docId || ((it.voucher || '') + '|' + (it.createdAt || '')); if (!o.items.has(k)) o.items.set(k, it); });
-      });
-      archiveMonths = {};
-      Object.keys(by).forEach(m => { archiveMonths[m] = { items: sortOld([...by[m].items.values()]), ids: by[m].ids }; });
-      renderArchive();
-    } catch (e) {
-      archiveListEl.innerHTML = '<div class="login-err">ဖတ်လို့မရပါ: ' + escapeHtml(e.message) + '<br>(Firestore rules မှာ archives ခွင့်ပြုပေးထားဖို့ လိုပါတယ်)</div>';
-    }
-  }
-
-  function renderArchive() {
-    const months = Object.keys(archiveMonths).sort().reverse();
-    archiveListEl.innerHTML = months.map(m => {
-      const a = archiveMonths[m];
-      const lbl = /^\d{4}-\d{2}$/.test(m) ? monthLabel(m) : m;
-      return '<div class="arc-row"><span class="t">' + escapeHtml(lbl) + '</span><span class="c">' + a.items.length + ' ခု' + (archiveExported[m] ? ' · ✓ ဖိုင်ထုတ်ပြီး' : '') + '</span>' +
-        '<div class="b"><button class="arcExp" data-m="' + escapeHtml(m) + '">📥 PDF + CSV ထုတ်မည်</button><button class="arcDel" data-m="' + escapeHtml(m) + '">🗑 ဖျက်မည်</button></div></div>';
-    }).join('') || '<div class="dnote">Archive ထဲ ဘာမှ မရှိသေးပါ</div>';
-  }
-
-  archiveListEl.addEventListener('click', async (e) => {
-    const m = e.target.dataset && e.target.dataset.m;
-    const a = m && archiveMonths[m];
-    if (!a) return;
-    const btn = e.target;
-    if (btn.classList.contains('arcExp')) {
-      btn.disabled = true; const old = btn.textContent; btn.textContent = 'ဖိုင်ပြင်နေသည်...';
-      try {
-        const pdf = await buildOldVouchersPdf(a.items);
-        downloadBlob(pdf, 'archive_' + m + '.pdf');
-        await new Promise(r => setTimeout(r, 900));
-        downloadBlob(buildOldVouchersCsv(a.items), 'archive_' + m + '.csv');
-        archiveExported[m] = true;
-        renderArchive();
-        showToast('ဖိုင် ၂ ခု (archive_' + m + '.pdf / .csv) ကို Downloads ထဲ သိမ်းပြီး');
-      } catch (err) { alert('ဖိုင်မထုတ်နိုင်ပါ: ' + err.message); btn.disabled = false; btn.textContent = old; }
-    } else if (btn.classList.contains('arcDel')) {
-      const warn = archiveExported[m] ? '' : '\n\n⚠️ ဒီလအတွက် PDF/CSV ကို ဒီအကြိမ်မှာ မထုတ်ရသေးပါ!';
-      if (!confirm((/^\d{4}-\d{2}$/.test(m) ? monthLabel(m) : m) + ' ရဲ့ Archive ' + a.items.length + ' ခုကို အပြီးဖျက်မှာ သေချာလား? ပြန်မရနိုင်ပါ။' + warn)) return;
-      if (!archiveExported[m] && !confirm('ဖိုင်မထုတ်ရသေးဘဲ ဖျက်မှာ သေချာပါသလား?')) return;
-      btn.disabled = true; btn.textContent = 'ဖျက်နေသည်...';
-      try {
-        for (let i = 0; i < a.ids.length; i += 400) {
-          const b = db.batch();
-          a.ids.slice(i, i + 400).forEach(id => b.delete(db.collection('archives').doc(id)));
-          await b.commit();
-        }
-        delete archiveMonths[m]; delete archiveExported[m];
-        renderArchive();
-        showToast('Archive ဖျက်ပြီးပါပြီ');
-      } catch (err) { alert('ဖျက်လို့မရပါ: ' + err.message); btn.disabled = false; btn.textContent = '🗑 ဖျက်မည်'; }
-    }
-  });
-</script>
-</body>
-</html>
+  
