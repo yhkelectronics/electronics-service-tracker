@@ -201,7 +201,6 @@
   .arc-row .b button { background: none; border: 1px solid var(--line); color: var(--teal); border-radius: 6px; padding: 7px 12px; font-size: 0.8rem; cursor: pointer; font-family: var(--font-body); }
   .arc-row .b button.arcDel { color: var(--red); }
   .card-used { margin: 8px 0 0; padding: 8px 10px; border-left: 3px solid var(--teal); background: var(--surface-2); border-radius: 6px; font-size: 0.85rem; line-height: 1.6; }
-  .card-actions button.usedbtn { background: none; border: 1px solid var(--line); color: var(--teal); border-radius: 6px; padding: 6px 10px; font-size: 0.8rem; cursor: pointer; }
   .card-send { margin: 8px 0 0; padding: 10px 12px; border-left: 3px solid var(--copper); background: rgba(217,119,6,.12); border-radius: 6px; font-size: 0.85rem; line-height: 1.7; }
   .card-send.new { animation: pulseSend 1.6s ease-in-out infinite; }
   @keyframes pulseSend { 0%,100% { box-shadow: 0 0 0 0 rgba(217,119,6,.0); } 50% { box-shadow: 0 0 0 4px rgba(217,119,6,.35); } }
@@ -213,6 +212,14 @@
   .sendbox { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px; color: var(--text); }
   .sendbox h3 { font-family: var(--font-head); margin: 0 0 4px; font-size: 1.05rem; }
   .sendbox textarea { background: var(--surface-2); border: 1px solid var(--line); color: var(--text); border-radius: 7px; padding: 10px; font-family: var(--font-body); font-size: 0.92rem; min-height: 70px; resize: vertical; }
+  .card-dec { margin: 8px 0 0; padding: 10px 12px; border-radius: 6px; font-size: 0.88rem; line-height: 1.7; }
+  .card-dec.repair { border-left: 3px solid #2e9e6b; background: rgba(46,158,107,.14); }
+  .card-dec.decline { border-left: 3px solid #d64545; background: rgba(214,69,69,.13); }
+  .card-dec .decnew { margin-top: 6px; background: var(--teal); color: #fff; border: none; border-radius: 6px; padding: 6px 12px; font-size: 0.8rem; cursor: pointer; font-family: var(--font-body); }
+  .card-send .decbtns { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+  .card-send .decbtns button { border: none; border-radius: 6px; padding: 8px 12px; font-size: 0.82rem; cursor: pointer; color: #fff; font-family: var(--font-body); font-weight: 600; }
+  .card-send .decbtns .decrepair { background: #2e9e6b; }
+  .card-send .decbtns .decdecline { background: #d64545; }
 </style>
 </head>
 <body>
@@ -521,7 +528,7 @@
     devicesListenerStarted = usersListenerStarted = settingsListenerStarted = licenseListenerStarted = adminListenerStarted = false;
     devices = []; users = []; requests = []; adminOwnerReqs = []; adminShops = []; adminShopsLoaded = false;
     license = null; licenseLoaded = false;
-    expiredPending = []; purgeClockOk = false; purgeBlocked = false; knownSent = null; pendingOnly = false; archiveMonths = {}; archiveExported = {};
+    expiredPending = []; purgeClockOk = false; purgeBlocked = false; knownSent = null; knownDec = null; pendingOnly = false; archiveMonths = {}; archiveExported = {};
     shopInfo = { name: '', desc: '', phone: '', address: '', footer: '' };
   }
 
@@ -1379,6 +1386,7 @@
       const mine = l.by === (currentUser && (currentUser.name || currentUser.email));
       return `<div class="row">${who} — 📨 စာရင်းကိုင်ထံ ပို့ခဲ့: ${escapeHtml(l.parts || '-')}${(canSeeMoney() || mine) ? ' · ပစ္စည်းကုန်ကျ ' + fmt(l.cost || 0) + ' · ပြုပြင်ခ ' + fmt(l.fee || 0) : ''} ${t}</div>`;
     }
+    if (l.type === 'decision') return `<div class="row">${who} — 📞 Customer ${l.decision === 'repair' ? '✅ ပြင်မယ်' : '❌ မပြင်ဘူး'} လို့ ဆုံးဖြတ်ကြောင်း မှတ်ခဲ့ ${t}</div>`;
     if (l.type === 'ack') return `<div class="row">${who} — ✓ ပို့ထားတာ မြင်ပြီး ${t}</div>`;
     if (l.type === 'edit') {
       const txt = (l.changes || []).map(c => {
@@ -1463,7 +1471,15 @@
     return !!d && !!d.sentToAcct && !d.acctEdited && (!d.acctAck || d.acctAck < d.sentToAcct)
       && d.status !== 'done' && d.status !== 'unrepairable';
   }
-  function pendingList() { return canSeeSent() ? devices.filter(isPending) : []; }
+  const meName = () => (currentUser && (currentUser.name || currentUser.email)) || '';
+  const isTech = () => !!currentUser && currentUser.role === 'technician';
+  const isMine = (d) => !!d && (d.sentBy === meName() || d.technician === meName());
+  const isDecUnseen = (d) => !!d && !!d.custDecisionAt && (!d.decSeen || d.decSeen < d.custDecisionAt);
+  function pendingList() {
+    if (canSeeSent()) return devices.filter(isPending);
+    if (isTech()) return devices.filter(d => isMine(d) && isDecUnseen(d));
+    return [];
+  }
   function setTitleCount(n) {
     const base = (document.title || '').replace(/^\(\d+\)\s*/, '');
     document.title = (n > 0 ? '(' + n + ') ' : '') + base;
@@ -1485,14 +1501,32 @@
     try { if (window.Notification && Notification.permission === 'granted') new Notification('📨 ပြုပြင်သူက ပို့လိုက်ပါပြီ', { body: names }); } catch (e) {}
   }
   // snapshot တိုင်း — အသစ်ပို့လာတာ ရှိမရှိ စစ် (ပထမအကြိမ်ဖတ်တာ မပါ)
+  let knownDec = null;
   function checkSentAlerts() {
-    if (!canSeeSent()) { knownSent = null; return; }
-    const cur = new Map(devices.filter(d => d.sentToAcct).map(d => [d.id, d.sentToAcct]));
-    if (knownSent) {
-      const fresh = devices.filter(d => isPending(d) && knownSent.get(d.id) !== d.sentToAcct && d.sentBy !== (currentUser.name || currentUser.email));
-      alertNewSent(fresh);
-    }
-    knownSent = cur;
+    const me = meName();
+    // စာရင်းကိုင်/ပိုင်ရှင် — ပြုပြင်သူ အသစ်ပို့လာတာ
+    if (canSeeSent()) {
+      const cur = new Map(devices.filter(d => d.sentToAcct).map(d => [d.id, d.sentToAcct]));
+      if (knownSent) {
+        const fresh = devices.filter(d => isPending(d) && knownSent.get(d.id) !== d.sentToAcct && d.sentBy !== me);
+        alertNewSent(fresh);
+      }
+      knownSent = cur;
+    } else knownSent = null;
+    // ပြုပြင်သူ — Customer ဆုံးဖြတ်ချက် အသစ်ရောက်လာတာ
+    if (isTech()) {
+      const cur = new Map(devices.filter(d => d.custDecisionAt).map(d => [d.id, d.custDecisionAt]));
+      if (knownDec) {
+        const fresh = devices.filter(d => isMine(d) && d.custDecisionAt && knownDec.get(d.id) !== d.custDecisionAt && d.custDecisionBy !== me);
+        if (fresh.length) {
+          showToast(fresh.map(d => (d.custDecision === 'repair' ? '✅ ' : '❌ ') + (d.voucher || '') + ' ' + (d.device || '') + ' — Customer က ' + (d.custDecision === 'repair' ? 'ပြင်မယ်' : 'မပြင်ဘူး')).join(' | '), 14000);
+          beep();
+          try { if (navigator.vibrate) navigator.vibrate([200, 100, 200]); } catch (e) {}
+          try { if (window.Notification && Notification.permission === 'granted') new Notification('📞 Customer ဆုံးဖြတ်ချက် ရောက်ပါပြီ', { body: fresh.map(d => d.voucher + ' ' + (d.custDecision === 'repair' ? 'ပြင်မယ်' : 'မပြင်ဘူး')).join(', ') }); } catch (e) {}
+        }
+      }
+      knownDec = cur;
+    } else knownDec = null;
   }
   function renderPending() {
     const bar = document.getElementById('pendBar');
@@ -1500,7 +1534,7 @@
     const n = pendingList().length;
     if (!n) { pendingOnly = false; bar.style.display = 'none'; setTitleCount(0); return; }
     bar.style.display = 'flex';
-    document.getElementById('pendText').textContent = '📨 ပြုပြင်သူက ပို့ထားတာ ' + n + ' ခု စစ်ရန်ကျန်';
+    document.getElementById('pendText').textContent = canSeeSent() ? '📨 ပြုပြင်သူက ပို့ထားတာ ' + n + ' ခု စစ်ရန်ကျန်' : '📞 Customer ဆုံးဖြတ်ချက် ' + n + ' ခု ရောက်နေပါပြီ';
     document.getElementById('pendGo').textContent = pendingOnly ? '✕ အားလုံးပြန်ကြည့်' : 'ကြည့်မည် ›';
     setTitleCount(n);
   }
@@ -1544,7 +1578,8 @@
           </div>
           ${d.status === 'waiting_parts' ? `<div class="card-wait">⏳ အပိုပစ္စည်းစောင့်နေ${d.partsNeeded ? ' — <b>' + escapeHtml(d.partsNeeded) + '</b>' : ''} · ${waitingText(d)}</div>` : ''}
           ${d.partsUsed ? `<div class="card-used">🔩 လဲလှယ်ပစ္စည်း- <b>${escapeHtml(d.partsUsed)}</b></div>` : ''}
-          ${(d.sentToAcct && !d.acctEdited && canSeeSent()) ? `<div class="card-send${isPending(d) ? ' new' : ' sent'}">${isPending(d) ? '📨 <b>ပြုပြင်သူ ' + escapeHtml(d.sentBy || '') + '</b> က ပို့ထားတယ် — စစ်ပါ' : '✓ ပြုပြင်သူ ' + escapeHtml(d.sentBy || '') + ' ပို့ထားတာ မြင်ပြီး'}<br>လဲရမည့်ပစ္စည်း- <b>${escapeHtml(d.partsUsed || '-')}</b><br>ပစ္စည်းကုန်ကျ- <b>${fmt(d.propCost || 0)}</b> · ပြုပြင်ခ- <b>${fmt(d.propFee || 0)}</b> <span style="opacity:.7">(${fmtTime(d.sentToAcct)})</span>${isPending(d) ? `<br><button class="ackbtn" data-id="${d.id}">✓ မြင်ပြီး</button>` : ''}</div>` : ''}
+          ${(d.sentToAcct && !d.acctEdited && canSeeSent()) ? `<div class="card-send${isPending(d) ? ' new' : ' sent'}">${isPending(d) ? '📨 <b>ပြုပြင်သူ ' + escapeHtml(d.sentBy || '') + '</b> က ပို့ထားတယ် — စစ်ပါ' : '✓ ပြုပြင်သူ ' + escapeHtml(d.sentBy || '') + ' ပို့ထားတာ မြင်ပြီး'}<br>လဲရမည့်ပစ္စည်း- <b>${escapeHtml(d.partsUsed || '-')}</b><br>ပစ္စည်းကုန်ကျ- <b>${fmt(d.propCost || 0)}</b> · ပြုပြင်ခ- <b>${fmt(d.propFee || 0)}</b> <span style="opacity:.7">(${fmtTime(d.sentToAcct)})</span>${isPending(d) ? `<br>📞 Customer: <b>${escapeHtml(d.customer || '-')}</b> ${d.phone ? `<a href="tel:${escapeHtml(d.phone)}">${escapeHtml(d.phone)}</a>` : ''}<div class="decbtns"><button class="decrepair" data-id="${d.id}">✅ Customer ပြင်မယ်</button><button class="decdecline" data-id="${d.id}">❌ မပြင်ဘူး</button><button class="ackbtn" data-id="${d.id}" style="margin:0;">✓ မြင်ပြီး (ဖုန်းမဆက်သေး)</button></div>` : ''}</div>` : ''}
+          ${d.custDecision ? `<div class="card-dec ${d.custDecision}">${d.custDecision === 'repair' ? '✅ Customer က <b>ပြင်မယ်</b> လို့ ဆုံးဖြတ်ပြီး' : '❌ Customer က <b>မပြင်ဘူး</b>' + (d.unrepairReason ? ' — ' + escapeHtml(d.unrepairReason) : '')} <span style="opacity:.7">(${escapeHtml(d.custDecisionBy || '')} · ${fmtTime(d.custDecisionAt)})</span>${(isTech() && isDecUnseen(d)) ? `<br><button class="decnew" data-id="${d.id}">✓ မြင်ပြီး</button>` : ''}</div>` : ''}
           ${(d.sentToAcct && !canSeeSent()) ? `<div class="card-send sent">📨 စာရင်းကိုင်ထံ ပို့ပြီး (${fmtTime(d.sentToAcct)}) — ပစ္စည်းကုန်ကျ ${fmt(d.propCost || 0)} · ပြုပြင်ခ ${fmt(d.propFee || 0)}${d.acctEdited ? ' · ✓ စာရင်းကိုင် သတ်မှတ်ပြီး' : (d.acctAck && d.acctAck >= d.sentToAcct ? ' · ✓ မြင်ပြီး' : ' · စောင့်ဆိုင်းနေ')}</div>` : ''}
           <div class="card-people">
             <span>လက်ခံရက် <b>${escapeHtml(d.date || '-')}</b>${(d.status !== 'done' && d.status !== 'unrepairable' && daysSince(d.date || d.createdAt) !== null) ? `<span class="age${daysSince(d.date || d.createdAt) >= 7 ? ' old' : ''}">${dayLabel(daysSince(d.date || d.createdAt))}ရှိပြီ</span>` : ''}</span>
@@ -1572,7 +1607,6 @@
             ${d.log && d.log.length > 0 ? `<button class="histbtn" data-id="${d.id}">မှတ်တမ်း (${d.log.length})</button>` : ''}
             ${((isOwner() || (currentUser && currentUser.role === 'technician')) && !d.technician && d.status !== 'done' && d.status !== 'unrepairable') ? `<button class="takebtn" data-id="${d.id}">🔧 ပြုပြင်မည်</button>` : ''}
             ${(canEditRecord() && !editBlocked(d)) ? `<button class="editbtn" data-id="${d.id}">✏️ ပြင်မည်</button>` : ''}
-            ${((isOwner() || (currentUser && currentUser.role === 'technician')) && !isLockedFor(d)) ? `<button class="usedbtn" data-id="${d.id}">🔩 လဲလှယ်ပစ္စည်း${d.partsUsed ? ' ပြင်' : ' မှတ်'}</button>` : ''}
             ${((isOwner() || (currentUser && currentUser.role === 'technician')) && !isLockedFor(d) && d.status !== 'done' && d.status !== 'unrepairable' && (isOwner() || !d.acctEdited)) ? `<button class="sendbtn" data-id="${d.id}">📨 စာရင်းကိုင်ထံ ${d.sentToAcct ? 'ပြန်ပို့' : 'ပို့'}မည်</button>` : ''}
             <button class="printbtn" data-id="${d.id}">🖨 ဘောင်ချာ</button>
             ${currentUser.role === 'owner' ? `<button class="del" data-id="${d.id}">ဖျက်မည်</button>` : ''}
@@ -1637,6 +1671,62 @@
       document.getElementById('hist-' + e.target.dataset.id).classList.toggle('open');
     }
     if (e.target.classList.contains('sendbtn')) { openSend(e.target.dataset.id); return; }
+    if (e.target.classList.contains('decseen')) { return; }
+    if (e.target.classList.contains('decnew')) {
+      const id = e.target.dataset.id, dev = devices.find(x => x.id === id);
+      if (!dev || !isTech()) return;
+      e.target.disabled = true;
+      try { await db.collection('devices').doc(id).update({ decSeen: new Date().toISOString() }); }
+      catch (err) { alert('လုပ်လို့မရပါ: ' + err.message); e.target.disabled = false; }
+      return;
+    }
+    if (e.target.classList.contains('decrepair')) {
+      if (!canSeeSent()) return;
+      const id = e.target.dataset.id, dev = devices.find(x => x.id === id);
+      if (!dev || !requireLicense()) return;
+      if (!confirm('Customer က ပြင်ဖို့ သဘောတူပြီလား? ပြုပြင်သူကို "ပြင်မယ်" လို့ အကြောင်းကြားပါမယ်။')) return;
+      const now = new Date().toISOString(), me = meName(), role = titleOf(currentUser);
+      const logs = [{ type: 'decision', decision: 'repair', by: me, byRole: role, at: now }];
+      const upd = { custDecision: 'repair', custDecisionAt: now, custDecisionBy: me, acctAck: now };
+      if (dev.status === 'received' || dev.status === 'checking') {
+        upd.status = 'repairing';
+        logs.push({ from: dev.status, to: 'repairing', by: me, byRole: role, at: now });
+      }
+      upd.log = firebase.firestore.FieldValue.arrayUnion(...logs);
+      e.target.disabled = true;
+      try {
+        await db.collection('devices').doc(id).update(upd);
+        if (canEditRecord() && !editBlocked(dev)) openEdit(id);   // ပြင်ဆင်ခ / ပစ္စည်းကုန်ကျ အတည်ပြုဖို့ (ပြုပြင်သူပို့တာနဲ့ ဖြည့်ပေးထား)
+      } catch (err) { alert('လုပ်လို့မရပါ: ' + err.message); e.target.disabled = false; }
+      return;
+    }
+    if (e.target.classList.contains('decdecline')) {
+      if (!canSeeSent()) return;
+      const id = e.target.dataset.id, dev = devices.find(x => x.id === id);
+      if (!dev || !requireLicense()) return;
+      const why = prompt('Customer မပြင်တဲ့ အကြောင်းရင်း (မရေးရင် "Customer မပြင်ချင်ပါ" လို့ မှတ်မယ်)', 'Customer မပြင်ချင်ပါ');
+      if (why === null) return;
+      const reason = why.trim() || 'Customer မပြင်ချင်ပါ';
+      const def = dev.inspectFee != null && dev.inspectFee !== '' ? dev.inspectFee : lastInspectFee();
+      const pf = prompt('စစ်ဆေးခ (Ks) ဘယ်လောက်ယူမလဲ? (ဂဏန်းသာ၊ မယူရင် 0)', def);
+      if (pf === null) return;
+      const v = String(pf).replace(/[,\s]/g, '');
+      if (!/^[0-9]+(\.[0-9]+)?$/.test(v)) { alert('ကိန်းဂဏန်းသာ ရိုက်ပါ'); return; }
+      rememberInspectFee(v);
+      const now = new Date().toISOString(), me = meName(), role = titleOf(currentUser);
+      e.target.disabled = true;
+      try {
+        await db.collection('devices').doc(id).update({
+          status: 'unrepairable', unrepairReason: reason, inspectFee: Number(v),
+          custDecision: 'decline', custDecisionAt: now, custDecisionBy: me, acctAck: now,
+          log: firebase.firestore.FieldValue.arrayUnion(
+            { type: 'decision', decision: 'decline', by: me, byRole: role, at: now },
+            { from: dev.status, to: 'unrepairable', by: me, byRole: role, at: now, note: reason, fee: Number(v) }
+          )
+        });
+      } catch (err) { alert('လုပ်လို့မရပါ: ' + err.message); e.target.disabled = false; }
+      return;
+    }
     if (e.target.classList.contains('ackbtn')) {
       if (!canSeeSent()) return;
       const id = e.target.dataset.id, dev = devices.find(x => x.id === id);
@@ -1647,23 +1737,6 @@
         await db.collection('devices').doc(id).update({ acctAck: now, log: firebase.firestore.FieldValue.arrayUnion({ type: 'ack', by: me, byRole: titleOf(currentUser), at: now }) });
       } catch (err) { alert('လုပ်လို့မရပါ: ' + err.message); e.target.disabled = false; }
       return;
-    }
-    if (e.target.classList.contains('usedbtn')) {
-      if (!(isOwner() || (currentUser && currentUser.role === 'technician'))) return;
-      const id = e.target.dataset.id, dev = devices.find(x => x.id === id);
-      if (!dev || isLockedFor(dev)) return;
-      if (!requireLicense()) return;
-      const u = prompt('ဘာပစ္စည်းတွေ လဲလှယ်ခဲ့လဲ? (ဥပမာ - Battery, LCD, Charging port)\nအားလုံးဖျက်ချင်ရင် ဗလာထားပါ', dev.partsUsed || '');
-      if (u === null) return;
-      const nv = u.trim(), old = dev.partsUsed || '';
-      if (nv === old) return;
-      const me = currentUser.name || currentUser.email;
-      try {
-        await db.collection('devices').doc(id).update({
-          partsUsed: nv,
-          log: firebase.firestore.FieldValue.arrayUnion({ type: 'edit', by: me, byRole: titleOf(currentUser), at: new Date().toISOString(), changes: [{ key: 'partsUsed', f: EDIT_LABELS.partsUsed, from: old, to: nv }] })
-        });
-      } catch (err) { alert('မှတ်လို့မရပါ: ' + err.message); }
     }
     if (e.target.classList.contains('takebtn')) {
       if (!(isOwner() || (currentUser && currentUser.role === 'technician'))) return;
