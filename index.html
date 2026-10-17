@@ -497,8 +497,8 @@
   };
   firebase.initializeApp(firebaseConfig);
   const db = firebase.firestore();
-  // လိုင်းညံ့တဲ့နေရာမှာ ပိုခိုင်မာအောင် (WebChannel မရရင် long-polling သို့ အလိုအလျောက်ပြောင်း) + ဖုန်းထဲ data cache သိမ်း → နောက်တစ်ခါ ချက်ချင်းပွင့်
-  try { db.settings({ experimentalAutoDetectLongPolling: true, merge: true }); } catch (e) {}
+  // လိုင်းညံ့/ISP proxy ကြားမှာ streaming ပိတ်ခံရတတ်လို့ long-polling ကို တိုက်ရိုက်သုံး (စောင့်ဆိုင်းချိန် မရှိ) + ဖုန်းထဲ data cache သိမ်း → နောက်တစ်ခါ ချက်ချင်းပွင့်
+  try { db.settings({ experimentalForceLongPolling: true, merge: true }); } catch (e) {}
   try { db.enablePersistence({ synchronizeTabs: true }).catch(() => {}); } catch (e) {}
   // Admin (ဆိုင်ရောင်းသူ) Gmail — ဆိုင်ပိုင်ရှင်လျှောက်လွှာ လက်ခံ၊ သက်တမ်းထိန်းသူ။ firestore.rules ထဲက email နဲ့ တူရမယ်
   const ADMIN_EMAIL = 'yhkelectronics@gmail.com';
@@ -864,19 +864,20 @@
       afterLogin();
     } catch (e) {
       const slow = /offline|timeout|unavailable|network/i.test(e && e.message || '');
-      loginErr.textContent = slow ? 'အင်တာနက် လိုင်းနှေးနေပါတယ် — ခဏနေပြီး စာမျက်နှာကို refresh လုပ်ပါ (ပထမဆုံးအကြိမ်သာ လိုင်းကောင်းဖို့ လိုပါတယ်)' : 'အမှား: ' + (e && e.message);
+      loginErr.innerHTML = (slow ? 'အင်တာနက် လိုင်းနှေးနေပါတယ် (ပထမဆုံးအကြိမ်သာ လိုင်းကောင်းဖို့ လိုပါတယ်)' : 'အမှား: ' + escapeHtml((e && (e.code ? e.code + ' — ' : '') + e.message) || '')) + '<br><a href="#" onclick="location.reload();return false;" style="color:var(--teal);">↻ ထပ်ကြိုးစားမည်</a>';
       setAuthBusy(false);
     }
   });
 
   // server ကို အချိန်ကန့်သတ်ပြီး ဖတ် — မရရင် ဖုန်းထဲ cache က ပြန်ယူ
   async function getDocFast(ref) {
+    const hint = setTimeout(() => { try { loginOk.textContent = 'လိုင်းနှေးနေပါတယ် — ဆက်စောင့်နေပါတယ် (အများဆုံး စက္ကန့် ၃၀)'; } catch (e) {} }, 8000);
     try {
-      return await Promise.race([ref.get(), new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 9000))]);
+      return await Promise.race([ref.get(), new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 30000))]);
     } catch (e) {
       try { const c = await ref.get({ source: 'cache' }); if (c.exists) return c; } catch (_) {}
       throw e;
-    }
+    } finally { clearTimeout(hint); loginOk.textContent = ''; }
   }
   // ဖုန်းထဲက profile နဲ့ ဝင်ပြီးနောက် နောက်ကွယ်မှာ server နဲ့ တိုက်စစ် (ဝန်ထမ်းဖယ်ထားရင်/role ပြောင်းရင် ချက်ချင်းလိုက်ပြင်)
   async function refreshProfile(fbUser, cached, saveProf) {
@@ -2296,4 +2297,73 @@
   document.getElementById('archiveBtn').addEventListener('click', () => {
     archivePanel.classList.add('open');
     archivePanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  
+    loadArchive();
+  });
+  document.getElementById('closeArchiveBtn').addEventListener('click', () => archivePanel.classList.remove('open'));
+
+  async function loadArchive() {
+    if (!currentUser || !currentUser.shopId) return;
+    archiveListEl.innerHTML = '<div class="dnote">ဖတ်နေသည်...</div>';
+    try {
+      const snap = await db.collection('archives').where('shopId', '==', currentUser.shopId).get();
+      const by = {};
+      snap.docs.forEach(doc => {
+        const x = doc.data(), m = x.month || 'unknown';
+        const o = by[m] || (by[m] = { items: new Map(), ids: [] });
+        o.ids.push(doc.id);
+        (x.items || []).forEach(it => { const k = it.docId || ((it.voucher || '') + '|' + (it.createdAt || '')); if (!o.items.has(k)) o.items.set(k, it); });
+      });
+      archiveMonths = {};
+      Object.keys(by).forEach(m => { archiveMonths[m] = { items: sortOld([...by[m].items.values()]), ids: by[m].ids }; });
+      renderArchive();
+    } catch (e) {
+      archiveListEl.innerHTML = '<div class="login-err">ဖတ်လို့မရပါ: ' + escapeHtml(e.message) + '<br>(Firestore rules မှာ archives ခွင့်ပြုပေးထားဖို့ လိုပါတယ်)</div>';
+    }
+  }
+
+  function renderArchive() {
+    const months = Object.keys(archiveMonths).sort().reverse();
+    archiveListEl.innerHTML = months.map(m => {
+      const a = archiveMonths[m];
+      const lbl = /^\d{4}-\d{2}$/.test(m) ? monthLabel(m) : m;
+      return '<div class="arc-row"><span class="t">' + escapeHtml(lbl) + '</span><span class="c">' + a.items.length + ' ခု' + (archiveExported[m] ? ' · ✓ ဖိုင်ထုတ်ပြီး' : '') + '</span>' +
+        '<div class="b"><button class="arcExp" data-m="' + escapeHtml(m) + '">📥 PDF + CSV ထုတ်မည်</button><button class="arcDel" data-m="' + escapeHtml(m) + '">🗑 ဖျက်မည်</button></div></div>';
+    }).join('') || '<div class="dnote">Archive ထဲ ဘာမှ မရှိသေးပါ</div>';
+  }
+
+  archiveListEl.addEventListener('click', async (e) => {
+    const m = e.target.dataset && e.target.dataset.m;
+    const a = m && archiveMonths[m];
+    if (!a) return;
+    const btn = e.target;
+    if (btn.classList.contains('arcExp')) {
+      btn.disabled = true; const old = btn.textContent; btn.textContent = 'ဖိုင်ပြင်နေသည်...';
+      try {
+        const pdf = await buildOldVouchersPdf(a.items);
+        downloadBlob(pdf, 'archive_' + m + '.pdf');
+        await new Promise(r => setTimeout(r, 900));
+        downloadBlob(buildOldVouchersCsv(a.items), 'archive_' + m + '.csv');
+        archiveExported[m] = true;
+        renderArchive();
+        showToast('ဖိုင် ၂ ခု (archive_' + m + '.pdf / .csv) ကို Downloads ထဲ သိမ်းပြီး');
+      } catch (err) { alert('ဖိုင်မထုတ်နိုင်ပါ: ' + err.message); btn.disabled = false; btn.textContent = old; }
+    } else if (btn.classList.contains('arcDel')) {
+      const warn = archiveExported[m] ? '' : '\n\n⚠️ ဒီလအတွက် PDF/CSV ကို ဒီအကြိမ်မှာ မထုတ်ရသေးပါ!';
+      if (!confirm((/^\d{4}-\d{2}$/.test(m) ? monthLabel(m) : m) + ' ရဲ့ Archive ' + a.items.length + ' ခုကို အပြီးဖျက်မှာ သေချာလား? ပြန်မရနိုင်ပါ။' + warn)) return;
+      if (!archiveExported[m] && !confirm('ဖိုင်မထုတ်ရသေးဘဲ ဖျက်မှာ သေချာပါသလား?')) return;
+      btn.disabled = true; btn.textContent = 'ဖျက်နေသည်...';
+      try {
+        for (let i = 0; i < a.ids.length; i += 400) {
+          const b = db.batch();
+          a.ids.slice(i, i + 400).forEach(id => b.delete(db.collection('archives').doc(id)));
+          await b.commit();
+        }
+        delete archiveMonths[m]; delete archiveExported[m];
+        renderArchive();
+        showToast('Archive ဖျက်ပြီးပါပြီ');
+      } catch (err) { alert('ဖျက်လို့မရပါ: ' + err.message); btn.disabled = false; btn.textContent = '🗑 ဖျက်မည်'; }
+    }
+  });
+</script>
+</body>
+</html>
