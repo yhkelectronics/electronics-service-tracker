@@ -449,7 +449,7 @@
       <div class="r-row"><span class="k">ဘောင်ချာနံပါတ်</span><span class="v" id="rVoucher"></span></div>
       <div class="r-row"><span class="k">Customer</span><span class="v" id="rCustomer"></span></div>
       <div class="r-row" id="rCustIdRow" style="display:none;"><span class="k">ID</span><span class="v" id="rCustId"></span></div>
-      <div class="r-row" id="rCustAddrRow" style="display:none;"><span class="k">လိပ်စာ</span><span class="v" id="rCustAddr"></span></div>
+      <div class="r-row" id="rCustAddrRow" style="display:none;align-items:flex-start;"><span class="k">လိပ်စာ</span><span class="v" id="rCustAddr" style="text-align:left;flex:1;"></span></div>
       <div class="r-row"><span class="k">ဖုန်း</span><span class="v" id="rPhone"></span></div>
       <div class="r-row"><span class="k">စက်ပစ္စည်း</span><span class="v" id="rDevice"></span></div>
       <div class="r-row"><span class="k">အခြေအနေ</span><span class="v" id="rStatus" style="font-weight:700;"></span></div>
@@ -1917,7 +1917,14 @@
     row('ဘောင်ချာနံပါတ်', d.voucher || '-');
     row('Customer', d.customer || '-');
     if (d.custId) row('ID', d.custId);
-    if (d.address) row('လိပ်စာ', d.address);
+    if (d.address) {
+      // လိပ်စာ ဘေးကနေ စရေး၊ ရှည်ရင် အောက်ကို ဆက် (စာသားစတဲ့နေရာမှာ ညီအောင်)
+      setFont(400); ctx.textAlign = 'left';
+      const lbl = 'လိပ်စာ', lx = PAD + ctx.measureText(lbl).width + 16;
+      ctx.fillText(lbl, PAD, y);
+      setFont(500);
+      wrapText(ctx, d.address, W - PAD - lx).forEach(l => { ctx.fillText(l, lx, y); y += LH; });
+    }
     row('ဖုန်း', d.phone || '-');
     row('စက်ပစ္စည်း', d.device || '-');
     row('အခြေအနေ', receiptStatus(d), true);
