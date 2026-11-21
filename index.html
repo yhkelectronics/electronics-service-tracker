@@ -399,6 +399,8 @@
       <div class="editor-bar" id="editorBar"></div>
       <div class="field"><label>ဘောင်ချာနံပါတ်</label><input id="fVoucher" type="text" placeholder="V-0001"></div>
       <div class="field"><label>customer အမည်</label><input id="fCustomer" type="text" placeholder="ဦးအောင်..."></div>
+      <div class="field"><label>ID (မဖြည့်လည်းရ)</label><input id="fCustId" type="text" placeholder="ID / မှတ်ပုံတင်နံပါတ်"></div>
+      <div class="field"><label>Customer လိပ်စာ (မဖြည့်လည်းရ)</label><input id="fAddress" type="text" placeholder="လိပ်စာ"></div>
       <div class="field"><label>ဖုန်းနံပါတ်</label><input id="fPhone" type="text" placeholder="09..."></div>
       <div class="field"><label>စက်ပစ္စည်း / မော်ဒယ်</label><input id="fDevice" type="text" placeholder="Samsung A54, TV LG..."></div>
       <div class="field"><label>လက်ခံရက်စွဲ</label><input id="fDate" type="date"></div>
@@ -446,6 +448,8 @@
       <hr>
       <div class="r-row"><span class="k">ဘောင်ချာနံပါတ်</span><span class="v" id="rVoucher"></span></div>
       <div class="r-row"><span class="k">Customer</span><span class="v" id="rCustomer"></span></div>
+      <div class="r-row" id="rCustIdRow" style="display:none;"><span class="k">ID</span><span class="v" id="rCustId"></span></div>
+      <div class="r-row" id="rCustAddrRow" style="display:none;"><span class="k">လိပ်စာ</span><span class="v" id="rCustAddr"></span></div>
       <div class="r-row"><span class="k">ဖုန်း</span><span class="v" id="rPhone"></span></div>
       <div class="r-row"><span class="k">စက်ပစ္စည်း</span><span class="v" id="rDevice"></span></div>
       <div class="r-row"><span class="k">အခြေအနေ</span><span class="v" id="rStatus" style="font-weight:700;"></span></div>
@@ -1245,7 +1249,7 @@
   }
 
   let editingId = null;
-  const EDIT_LABELS = { inspectFee:'စစ်ဆေးခ', voucher:'ဘောင်ချာနံပါတ်', customer:'Customer', phone:'ဖုန်း', device:'စက်ပစ္စည်း', receivedBy:'လက်ခံသူ', technician:'ပြင်မည့်သူ', issue:'ချို့ယွင်းချက်', date:'လက်ခံရက်စွဲ', quote:'ပြင်ဆင်ခကျသင့်ငွေ', parts:'အပိုပစ္စည်းကုန်ကျစရိတ်', partsUsed:'လဲလှယ်ပစ္စည်း', propCost:'အပိုပစ္စည်းကုန်ကျ (ပြုပြင်သူ ခန့်မှန်း)', propFee:'ပြုပြင်ခ (ပြုပြင်သူ ခန့်မှန်း)' };
+  const EDIT_LABELS = { inspectFee:'စစ်ဆေးခ', voucher:'ဘောင်ချာနံပါတ်', customer:'Customer', custId:'ID', address:'Customer လိပ်စာ', phone:'ဖုန်း', device:'စက်ပစ္စည်း', receivedBy:'လက်ခံသူ', technician:'ပြင်မည့်သူ', issue:'ချို့ယွင်းချက်', date:'လက်ခံရက်စွဲ', quote:'ပြင်ဆင်ခကျသင့်ငွေ', parts:'အပိုပစ္စည်းကုန်ကျစရိတ်', partsUsed:'လဲလှယ်ပစ္စည်း', propCost:'အပိုပစ္စည်းကုန်ကျ (ပြုပြင်သူ ခန့်မှန်း)', propFee:'ပြုပြင်ခ (ပြုပြင်သူ ခန့်မှန်း)' };
 
   function exitEdit() {
     editingId = null;
@@ -1258,7 +1262,7 @@
   }
 
   // စာရင်းကိုင်အတွက် — ခန့်မှန်းပြင်ဆင်ခ၊ အပိုပစ္စည်းကုန်ကျစရိတ် မှလွဲ၍ ကျန်တာ ပိတ်ထားမည်
-  const LOCKABLE = ['fVoucher','fCustomer','fPhone','fDevice','fDate','fReceivedBy','fTechnician','fIssue'];
+  const LOCKABLE = ['fVoucher','fCustomer','fCustId','fAddress','fPhone','fDevice','fDate','fReceivedBy','fTechnician','fIssue'];
   function setFieldsLocked(lock) {
     LOCKABLE.forEach(id => { document.getElementById(id).disabled = lock; });
   }
@@ -1270,6 +1274,8 @@
     editingId = id;
     document.getElementById('fVoucher').value = d.voucher || '';
     document.getElementById('fCustomer').value = d.customer || '';
+    document.getElementById('fCustId').value = d.custId || '';
+    document.getElementById('fAddress').value = d.address || '';
     document.getElementById('fPhone').value = d.phone || '';
     document.getElementById('fDevice').value = d.device || '';
     document.getElementById('fDate').value = d.date || '';
@@ -1305,6 +1311,8 @@
   function clearForm() {
     document.getElementById('fVoucher').value = '';
     document.getElementById('fCustomer').value = '';
+    document.getElementById('fCustId').value = '';
+    document.getElementById('fAddress').value = '';
     document.getElementById('fPhone').value = '';
     document.getElementById('fDevice').value = '';
     document.getElementById('fReceivedBy').value = currentUser ? (currentUser.name || currentUser.email) : '';
@@ -1332,6 +1340,8 @@
       } : {
         voucher: document.getElementById('fVoucher').value.trim(),
         customer,
+        custId: document.getElementById('fCustId').value.trim(),
+        address: document.getElementById('fAddress').value.trim(),
         phone: document.getElementById('fPhone').value.trim(),
         device,
         receivedBy: document.getElementById('fReceivedBy').value.trim(),
@@ -1385,6 +1395,8 @@
     const entry = {
       voucher: document.getElementById('fVoucher').value.trim() || nextVoucherNumber(),
       customer,
+      custId: document.getElementById('fCustId').value.trim(),
+      address: document.getElementById('fAddress').value.trim(),
       phone: document.getElementById('fPhone').value.trim(),
       device,
       receivedBy: document.getElementById('fReceivedBy').value.trim(),
@@ -1607,7 +1619,7 @@
     const baseList = pendingOnly ? pendingList() : listBase();
     let filtered = (pendingOnly || filter === 'all') ? baseList.slice() : baseList.filter(d => d.status === filter);
     const q = (document.getElementById('searchBox').value || '').trim().toLowerCase();
-    if (q) filtered = filtered.filter(d => [d.voucher, d.customer, d.phone, d.device].some(v => (v || '').toLowerCase().includes(q)));
+    if (q) filtered = filtered.filter(d => [d.voucher, d.customer, d.custId, d.address, d.phone, d.device].some(v => (v || '').toLowerCase().includes(q)));
     const key = (d) => new Date(d.createdAt || d.date || 0).getTime();
     filtered.sort((a, b) => document.getElementById('sortSel').value === 'old' ? key(a) - key(b) : key(b) - key(a));
     listEl.innerHTML = '';
@@ -1627,6 +1639,8 @@
           <div class="card-fields">
             <div class="row"><span class="lb">Device</span><span class="vl strong">${escapeHtml(d.device || '-')}</span></div>
             <div class="row"><span class="lb">Customer Name</span><span class="vl">${escapeHtml(d.customer || '-')}</span></div>
+            ${d.custId ? `<div class="row"><span class="lb">ID</span><span class="vl">${escapeHtml(d.custId)}</span></div>` : ''}
+            ${d.address ? `<div class="row"><span class="lb">Address</span><span class="vl">${escapeHtml(d.address)}</span></div>` : ''}
             <div class="row"><span class="lb">Phone</span><span class="vl">${d.phone ? `<a href="tel:${escapeHtml(d.phone)}">${escapeHtml(d.phone)}</a>` : '-'}</span></div>
             <div class="row"><span class="lb">Error</span><span class="vl issue">${escapeHtml(d.issue || '-')}</span></div>
           </div>
@@ -1902,6 +1916,8 @@
     hr();
     row('ဘောင်ချာနံပါတ်', d.voucher || '-');
     row('Customer', d.customer || '-');
+    if (d.custId) row('ID', d.custId);
+    if (d.address) row('လိပ်စာ', d.address);
     row('ဖုန်း', d.phone || '-');
     row('စက်ပစ္စည်း', d.device || '-');
     row('အခြေအနေ', receiptStatus(d), true);
@@ -1986,6 +2002,10 @@
     document.getElementById('rFoot').textContent = footerText();
     document.getElementById('rVoucher').textContent = d.voucher || '-';
     document.getElementById('rCustomer').textContent = d.customer || '-';
+    document.getElementById('rCustId').textContent = d.custId || '';
+    document.getElementById('rCustIdRow').style.display = d.custId ? '' : 'none';
+    document.getElementById('rCustAddr').textContent = d.address || '';
+    document.getElementById('rCustAddrRow').style.display = d.address ? '' : 'none';
     document.getElementById('rPhone').textContent = d.phone || '-';
     document.getElementById('rDevice').textContent = d.device || '-';
     document.getElementById('rIssue').textContent = d.issue || '-';
@@ -2166,7 +2186,7 @@
   }
 
   function buildOldVouchersCsv(rows) {
-    const keys = ['voucher', 'date', 'customer', 'phone', 'device', 'issue', 'status', 'quote', 'parts', 'inspectFee', 'partsUsed', 'receivedBy', 'technician', 'unrepairReason', 'createdAt', 'shopId'];
+    const keys = ['voucher', 'date', 'customer', 'custId', 'address', 'phone', 'device', 'issue', 'status', 'quote', 'parts', 'inspectFee', 'partsUsed', 'receivedBy', 'technician', 'unrepairReason', 'createdAt', 'shopId'];
     const esc = (v) => { v = v == null ? '' : String(v); return /[",\n\r]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
     const lines = [keys.join(',')].concat(rows.map(d => keys.map(k => esc(k === 'status' ? (STATUS_LABEL[d.status] || d.status) : d[k])).join(',')));
     return new Blob(['﻿' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' });
